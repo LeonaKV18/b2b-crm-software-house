@@ -1,0 +1,243 @@
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useAuth, type UserRole } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+
+export default function LoginPage() {
+  const { login, isLoggedIn, user } = useAuth()
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [role, setRole] = useState<UserRole>("admin")
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetSent, setResetSent] = useState(false)
+
+  useEffect(() => {
+    if (isLoggedIn && user) {
+      const dashboardRoutes: Record<UserRole, string> = {
+        admin: "/dashboard/admin",
+        sales: "/dashboard/sales",
+        pm: "/dashboard/pm",
+        developer: "/dashboard/developer",
+        client: "/dashboard/client",
+      }
+      router.push(dashboardRoutes[user.role])
+    }
+  }, [isLoggedIn, user, router])
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setTimeout(() => {
+      login(email, password, role)
+      setLoading(false)
+    }, 500)
+  }
+
+  const handleForgotPassword = (e: React.FormEvent) => {
+    e.preventDefault()
+    setTimeout(() => {
+      setResetSent(true)
+      setTimeout(() => {
+        setResetSent(false)
+        setShowForgotPassword(false)
+        setResetEmail("")
+      }, 3000)
+    }, 500)
+  }
+
+  if (isLoggedIn) {
+    return null
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/20 to-accent/20 flex-col justify-between p-12 border-r border-border">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold">CRM</span>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">ProjectHub</h1>
+            <p className="text-xs text-muted-foreground">CRM & PM Suite</p>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          <div>
+            <p className="text-4xl font-bold text-foreground mb-4">Manage Projects,</p>
+            <p className="text-4xl font-bold text-foreground mb-4">Build Better.</p>
+            <p className="text-muted-foreground mt-4">
+              Complete CRM and project lifecycle management for modern software houses.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-2xl font-bold text-primary">500+</div>
+              <p className="text-sm text-muted-foreground">Active Projects</p>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-accent">99.9%</div>
+              <p className="text-sm text-muted-foreground">Uptime</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">© 2025 ProjectHub. All rights reserved.</p>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
+        {!showForgotPassword ? (
+          <Card className="w-full max-w-md border-border">
+            <CardContent className="pt-8">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-2">Sign In</h2>
+                <p className="text-muted-foreground">Access your CRM dashboard</p>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-6">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-secondary border border-border text-foreground"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="bg-secondary border border-border text-foreground pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? "🙈" : "👁️"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Role Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Login as</label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as UserRole)}
+                    className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="sales">Sales Manager</option>
+                    <option value="pm">Project Manager</option>
+                    <option value="developer">Developer</option>
+                    <option value="client">Client</option>
+                  </select>
+                </div>
+
+                {/* Login Button */}
+                <Button
+                  type="submit"
+                  disabled={loading || !email || !password}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                >
+                  {loading ? "Signing in..." : "Sign In"}
+                </Button>
+              </form>
+
+              {/* Forgot Password Link */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="w-full max-w-md border-border">
+            <CardContent className="pt-8">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-2">Reset Password</h2>
+                <p className="text-muted-foreground">Enter your email to receive reset instructions</p>
+              </div>
+
+              {resetSent ? (
+                <div className="space-y-4">
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                    <p className="text-green-400 text-sm font-medium">✓ Reset link sent!</p>
+                    <p className="text-muted-foreground text-xs mt-2">
+                      Check your email for password reset instructions. Redirecting...
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email Address</label>
+                    <Input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      className="bg-secondary border border-border text-foreground"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={!resetEmail}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                  >
+                    Send Reset Link
+                  </Button>
+                </form>
+              )}
+
+              <div className="mt-6 pt-6 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false)
+                    setResetEmail("")
+                    setResetSent(false)
+                  }}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  )
+}
