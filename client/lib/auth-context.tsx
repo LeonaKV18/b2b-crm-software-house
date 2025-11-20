@@ -17,7 +17,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoggedIn: boolean
-  login: (email: string, password: string, role: UserRole) => void
+  login: (email: string, password: string, role: UserRole) => Promise<boolean>
   logout: () => void
   setUser: (user: User | null) => void
 }
@@ -28,19 +28,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const login = (email: string, password: string, role: UserRole) => {
-    // Simulated login - in real app, this would call an API
-    const newUser: User = {
-      id: Math.random().toString(),
-      email,
-      name: email.split("@")[0],
-      role,
-      company: role === "client" ? "Acme Corp" : "TechHouse",
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+  const login = async (email: string, password: string, role: UserRole): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, role }),
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        setIsLoggedIn(true);
+        return true;
+      } else {
+        let errorData = "Unknown error";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            errorData = await response.json();
+          } else {
+            errorData = await response.text();
+          }
+        } catch (parseError) {
+          errorData = `Failed to parse error response as JSON or text: ${parseError}`;
+        }
+        console.error("Login failed:", errorData);
+        setUser(null);
+        setIsLoggedIn(false);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error during login:", error);
+      setUser(null);
+      setIsLoggedIn(false);
+      return false;
     }
-    setUser(newUser)
-    setIsLoggedIn(true)
-  }
+  };
 
   const logout = () => {
     setUser(null)
