@@ -7,16 +7,70 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileText, Briefcase, CheckCircle, DollarSign } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface ClientStats {
+  proposalsCount: number;
+  activeProjectsCount: number;
+  completedProjectsCount: number;
+  totalSpent: number;
+}
 
 export default function ClientDashboard() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/client")
 
+  const [stats, setStats] = useState<ClientStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "client") {
+      router.push("/")
+      return
+    }
+
+    const fetchStats = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/client-dashboard-stats?userId=${user?.id}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setStats(data)
+      } catch (err) {
+        console.error("Failed to fetch client dashboard stats:", err)
+        setError("Failed to load dashboard statistics.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user?.id) { // Only fetch if user ID is available
+      fetchStats()
+    }
+  }, [isLoggedIn, user?.role, user?.id, router])
+
   if (!isLoggedIn || user?.role !== "client") {
-    router.push("/")
     return null
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading dashboard...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -41,7 +95,7 @@ export default function ClientDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Proposals</p>
-                    <p className="text-3xl font-bold text-foreground">3</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.proposalsCount}</p>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-lg">
                     <FileText className="text-primary" size={24} />
@@ -55,7 +109,7 @@ export default function ClientDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Active Projects</p>
-                    <p className="text-3xl font-bold text-foreground">2</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.activeProjectsCount}</p>
                   </div>
                   <div className="p-3 bg-accent/10 rounded-lg">
                     <Briefcase className="text-accent" size={24} />
@@ -69,7 +123,7 @@ export default function ClientDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Completed</p>
-                    <p className="text-3xl font-bold text-foreground">5</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.completedProjectsCount}</p>
                   </div>
                   <div className="p-3 bg-chart-3/10 rounded-lg">
                     <CheckCircle className="text-chart-3" size={24} />
@@ -83,7 +137,7 @@ export default function ClientDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Total Spent</p>
-                    <p className="text-3xl font-bold text-foreground">$85K</p>
+                    <p className="text-3xl font-bold text-foreground">${stats?.totalSpent ? (stats.totalSpent / 1000).toFixed(0) : 0}K</p>
                   </div>
                   <div className="p-3 bg-chart-2/10 rounded-lg">
                     <DollarSign className="text-chart-2" size={24} />

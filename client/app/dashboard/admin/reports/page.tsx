@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react" // Import useEffect
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
@@ -22,38 +23,118 @@ import {
 } from "recharts"
 import { Download } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+
+interface RevenueEntry {
+  month: string;
+  revenue: number;
+}
+
+interface ConversionData {
+  leadsCount: number;
+  proposalsCount: number;
+  approvedCount: number;
+}
+
+interface ProjectStatusData {
+  onTimeCount: number;
+  atRiskCount: number;
+  delayedCount: number;
+}
+
+interface SummaryMetrics {
+  totalRevenue: number;
+  activeClients: number;
+  conversionRate: number;
+  teamUtilization: number;
+}
 
 export default function ReportsPage() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/admin/reports")
 
+  const [revenueData, setRevenueData] = useState<RevenueEntry[]>([])
+  const [conversionStats, setConversionStats] = useState<ConversionData | null>(null)
+  const [projectStatusCounts, setProjectStatusCounts] = useState<ProjectStatusData | null>(null)
+  const [summaryMetrics, setSummaryMetrics] = useState<SummaryMetrics | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchReportsData = async () => {
+      try {
+        setLoading(true)
+        const [revenueRes, conversionRes, projectStatusRes, summaryRes] = await Promise.all([
+          fetch("/api/admin-revenue-data"),
+          fetch("/api/admin-conversion-data"),
+          fetch("/api/admin-project-status"),
+          fetch("/api/admin-summary-metrics"),
+        ])
+
+        if (!revenueRes.ok) throw new Error(`HTTP error! Revenue data: ${revenueRes.status}`)
+        if (!conversionRes.ok) throw new Error(`HTTP error! Conversion data: ${conversionRes.status}`)
+        if (!projectStatusRes.ok) throw new Error(`HTTP error! Project status: ${projectStatusRes.status}`)
+        if (!summaryRes.ok) throw new Error(`HTTP error! Summary metrics: ${summaryRes.status}`)
+
+        const revenueData = await revenueRes.json()
+        const conversionData = await conversionRes.json()
+        const projectStatusData = await projectStatusRes.json()
+        const summaryData = await summaryRes.json()
+
+        setRevenueData(revenueData)
+        setConversionStats(conversionData)
+        setProjectStatusCounts(projectStatusData)
+        setSummaryMetrics(summaryData)
+      } catch (err) {
+        console.error("Failed to fetch reports data:", err)
+        setError("Failed to load reports.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchReportsData()
+  }, [isLoggedIn, user?.role, router])
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
 
-  const revenueData = [
-    { month: "Jan", revenue: 45000 },
-    { month: "Feb", revenue: 62000 },
-    { month: "Mar", revenue: 58000 },
-    { month: "Apr", revenue: 75000 },
-    { month: "May", revenue: 88000 },
-    { month: "Jun", revenue: 95000 },
-  ]
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading reports...</p>
+      </div>
+    )
+  }
 
-  const conversionData = [
-    { stage: "Leads", count: 250 },
-    { stage: "Proposals", count: 35 },
-    { stage: "Approved", count: 18 },
-  ]
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
 
-  const projectStatus = [
-    { name: "On Time", value: 65, color: "#22c55e" },
-    { name: "At Risk", value: 20, color: "#f59e0b" },
-    { name: "Delayed", value: 15, color: "#ef4444" },
-  ]
+  // Process data for charts
+  const processedConversionData = conversionStats ? [
+    { stage: "Leads", count: conversionStats.leadsCount },
+    { stage: "Proposals", count: conversionStats.proposalsCount },
+    { stage: "Approved", count: conversionStats.approvedCount },
+  ] : [];
+
+  const totalProjects = (projectStatusCounts?.onTimeCount || 0) + (projectStatusCounts?.atRiskCount || 0) + (projectStatusCounts?.delayedCount || 0);
+  const processedProjectStatus = totalProjects > 0 && projectStatusCounts ? [
+    { name: "On Time", value: Math.round(((projectStatusCounts.onTimeCount || 0) / totalProjects) * 100), color: "#22c55e" },
+    { name: "At Risk", value: Math.round(((projectStatusCounts.atRiskCount || 0) / totalProjects) * 100), color: "#f59e0b" },
+    { name: "Delayed", value: Math.round(((projectStatusCounts.delayedCount || 0) / totalProjects) * 100), color: "#ef4444" },
+  ] : [];
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -123,7 +204,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={conversionData}>
+                  <BarChart data={processedConversionData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                     <XAxis dataKey="stage" stroke="#999" />
                     <YAxis stroke="#999" />
@@ -150,7 +231,7 @@ export default function ReportsPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={projectStatus}
+                      data={processedProjectStatus}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -159,7 +240,7 @@ export default function ReportsPage() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {projectStatus.map((entry, index) => (
+                      {processedProjectStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
@@ -181,28 +262,28 @@ export default function ReportsPage() {
             <Card className="bg-card border border-border">
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-foreground mt-2">$423K</p>
+                <p className="text-2xl font-bold text-foreground mt-2">${(summaryMetrics?.totalRevenue || 0).toLocaleString()}</p>
                 <p className="text-xs text-chart-3 mt-2">+12% from last month</p>
               </CardContent>
             </Card>
             <Card className="bg-card border border-border">
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Active Clients</p>
-                <p className="text-2xl font-bold text-foreground mt-2">48</p>
+                <p className="text-2xl font-bold text-foreground mt-2">{summaryMetrics?.activeClients}</p>
                 <p className="text-xs text-chart-3 mt-2">+2 this month</p>
               </CardContent>
             </Card>
             <Card className="bg-card border border-border">
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                <p className="text-2xl font-bold text-foreground mt-2">32%</p>
+                <p className="text-2xl font-bold text-foreground mt-2">{summaryMetrics?.conversionRate}%</p>
                 <p className="text-xs text-chart-3 mt-2">+5% from last month</p>
               </CardContent>
             </Card>
             <Card className="bg-card border border-border">
               <CardContent className="pt-6">
                 <p className="text-sm text-muted-foreground">Team Utilization</p>
-                <p className="text-2xl font-bold text-foreground mt-2">82%</p>
+                <p className="text-2xl font-bold text-foreground mt-2">{summaryMetrics?.teamUtilization}%</p>
                 <p className="text-xs text-primary mt-2">Optimal</p>
               </CardContent>
             </Card>

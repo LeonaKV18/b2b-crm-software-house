@@ -7,56 +7,72 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus, Calendar, Users } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface Project {
+  id: string;
+  name: string;
+  client: string;
+  progress: number;
+  deadline: string;
+  team: number;
+  status: string;
+}
 
 export default function ProjectsPage() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/admin/projects")
 
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchProjects = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/projects")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setProjects(data)
+      } catch (err) {
+        console.error("Failed to fetch projects:", err)
+        setError("Failed to load projects.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjects()
+  }, [isLoggedIn, user?.role, router])
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
 
-  const projects = [
-    {
-      id: "PRJ001",
-      name: "Portal Redesign",
-      client: "Acme Corp",
-      progress: 75,
-      deadline: "2025-03-15",
-      team: 4,
-      status: "In Progress",
-    },
-    {
-      id: "PRJ002",
-      name: "Mobile App",
-      client: "Tech Startup",
-      progress: 45,
-      deadline: "2025-04-30",
-      team: 6,
-      status: "In Progress",
-    },
-    {
-      id: "PRJ003",
-      name: "Cloud Migration",
-      client: "Digital Solutions",
-      progress: 20,
-      deadline: "2025-06-01",
-      team: 5,
-      status: "Planning",
-    },
-    {
-      id: "PRJ004",
-      name: "API Development",
-      client: "Enterprise",
-      progress: 90,
-      deadline: "2025-02-28",
-      team: 3,
-      status: "Final Review",
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading projects...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-background">

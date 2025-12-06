@@ -1,0 +1,124 @@
+erDiagram
+    users ||--|| contacts : "has"
+    users ||--o{ tasks : "locks"
+    
+    users ||--o{ clients : "is client"
+    clients ||--o{ proposals : "submits"
+    
+    proposals ||--o{ tasks : "has"
+    tasks ||--o| teams : "assigned to"
+    
+    proposals ||--o{ meetings : "schedules"
+    proposals ||--o{ feedback : "receives"
+    proposals ||--o| users : "managed by PM"
+    
+    meetings ||--o{ documents : "produces"
+    
+    meetings }o--o{ meeting_participants : "attended by"
+    users ||--o{ meeting_participants : "attends"
+    
+    teams ||--o{ team_members : "includes"
+    users ||--o{ team_members : "belongs to"
+    
+    users {
+        number user_id PK
+        varchar role "admin,pm,client,developer"
+        varchar email
+        varchar password_hash
+        number is_active
+    }
+    
+    contacts {
+        number contact_id PK
+        number user_id FK "owner of contact"
+        number client_id FK "optional: if additional client contact"
+        varchar full_name
+        varchar email
+        varchar phone
+        varchar contact_type "primary,secondary,tertiary - only for client contacts"
+    }
+    
+    clients {
+        number client_id PK
+        number user_id FK "client is also a user"
+        varchar company_name
+        varchar industry
+        varchar timezone
+    }
+    
+    proposals {
+        number proposal_id PK
+        number client_id FK
+        number pm_user_id FK "assigned PM"
+        varchar title
+        clob description
+        number estimated_hours
+        number actual_hours
+        number value
+        varchar status "draft,submitted,approved,rejected,active,completed"
+        number srs_approved
+        timestamp created_at
+        date expected_close
+        date actual_close
+    }
+    
+    tasks {
+        number task_id PK
+        number proposal_id FK "belongs to proposal"
+        number team_id FK "assigned to team"
+        number locked_by FK "team member working on it"
+        varchar title
+        clob description
+        varchar status "todo,in_progress,done"
+        date due_date
+        date completed_date
+    }
+    
+    teams {
+        number team_id PK
+        varchar team_name
+        date created_at
+    }
+    
+    team_members {
+        number team_member_id PK
+        number team_id FK
+        number user_id FK
+        number allocation_percentage "for utilization tracking"
+        date assigned_at
+    }
+    
+    meetings {
+        number meeting_id PK
+        number proposal_id FK
+        varchar meeting_type "scrum,sprint_planning,sprint_review,sprint_retrospective,srs,kickoff"
+        date scheduled_date
+        varchar subject
+        clob minutes_of_meeting
+        varchar status "scheduled,completed,cancelled"
+    }
+    
+    meeting_participants {
+        number participant_id PK
+        number meeting_id FK
+        number user_id FK
+        varchar attendance "invited,attended,absent"
+    }
+    
+    documents {
+        number document_id PK
+        number meeting_id FK "created during meeting"
+        varchar file_name
+        varchar file_path
+        varchar doc_type "srs,mom,wireframe,proposal,other"
+        number uploaded_by FK
+        timestamp uploaded_at
+    }
+    
+    feedback {
+        number feedback_id PK
+        number proposal_id FK
+        number rating
+        clob comments
+        date feedback_date
+    }

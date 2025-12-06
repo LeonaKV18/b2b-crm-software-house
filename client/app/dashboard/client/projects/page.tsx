@@ -7,22 +7,72 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2 } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface Project {
+  id: number;
+  name: string;
+  progress: number;
+  status: string;
+  deadline: string;
+}
 
 export default function ClientProjectsPage() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/client/projects")
 
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "client") {
+      router.push("/")
+      return
+    }
+
+    const fetchProjects = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/client-projects?userId=${user?.id}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setProjects(data)
+      } catch (err) {
+        console.error("Failed to fetch client projects:", err)
+        setError("Failed to load client projects.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user?.id) {
+      fetchProjects()
+    }
+  }, [isLoggedIn, user?.role, user?.id, router])
+
   if (!isLoggedIn || user?.role !== "client") {
-    router.push("/")
     return null
   }
 
-  const projects = [
-    { id: 1, name: "Portal Redesign", progress: 85, status: "On Track", deadline: "2025-03-15" },
-    { id: 2, name: "Mobile App", progress: 45, status: "On Track", deadline: "2025-04-30" },
-  ]
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading projects...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-background">

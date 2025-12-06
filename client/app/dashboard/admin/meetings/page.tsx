@@ -8,7 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Calendar, Clock, Users } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface Meeting {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  attendees: number;
+  type: string;
+  location: string;
+}
 
 export default function MeetingsPage() {
   const { user, isLoggedIn } = useAuth()
@@ -16,40 +26,55 @@ export default function MeetingsPage() {
   const [currentPath] = useState("/dashboard/admin/meetings")
   const [showForm, setShowForm] = useState(false)
 
+  const [meetings, setMeetings] = useState<Meeting[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchMeetings = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/meetings")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setMeetings(data)
+      } catch (err) {
+        console.error("Failed to fetch meetings:", err)
+        setError("Failed to load meetings.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMeetings()
+  }, [isLoggedIn, user?.role, router])
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
 
-  const meetings = [
-    {
-      id: 1,
-      title: "Client Review - Acme Corp",
-      date: "2025-02-01",
-      time: "2:00 PM",
-      attendees: 4,
-      type: "Client Meeting",
-      location: "Conference Room A",
-    },
-    {
-      id: 2,
-      title: "Team Standup",
-      date: "2025-02-02",
-      time: "10:00 AM",
-      attendees: 8,
-      type: "Internal",
-      location: "Online",
-    },
-    {
-      id: 3,
-      title: "Project Review - Portal",
-      date: "2025-02-03",
-      time: "3:30 PM",
-      attendees: 5,
-      type: "Project Review",
-      location: "Conference Room B",
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading meetings...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-background">

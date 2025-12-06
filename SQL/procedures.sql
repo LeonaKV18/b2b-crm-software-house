@@ -2,7 +2,7 @@
 
 CREATE OR REPLACE PROCEDURE verify_user (
     p_email IN VARCHAR2,
-    p_password_hash IN VARCHAR2,
+    p_password IN VARCHAR2,
     p_user_id OUT NUMBER,
     p_role OUT VARCHAR2,
     p_name OUT VARCHAR2, -- Assuming there is a name column in the users table
@@ -12,7 +12,7 @@ AS
 BEGIN
     SELECT user_id, role, name INTO p_user_id, p_role, p_name
     FROM users
-    WHERE email = p_email AND password_hash = p_password_hash AND is_active = 1;
+    WHERE email = p_email AND password = p_password AND is_active = 1;
 
     p_is_valid := 1; -- User is valid
 EXCEPTION
@@ -20,5 +20,721 @@ EXCEPTION
         p_is_valid := 0; -- User is not valid
     WHEN OTHERS THEN
         p_is_valid := 0; -- An error occurred
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_clients (
+    p_clients_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_clients_cursor FOR
+        SELECT
+            c.client_id AS id,
+            c.company_name AS name,
+            c.company_name AS company,
+            con.full_name AS contact,
+            'Active' as status, -- Dummy data
+            con.email AS email,
+            con.phone AS phone,
+            (SELECT COUNT(*) FROM proposals WHERE client_id = c.client_id) AS projects,
+            '2 days ago' as lastInteraction -- Dummy data
+        FROM
+            clients c
+        LEFT JOIN
+            contacts con ON c.client_id = con.client_id AND con.contact_type = 'primary';
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_projects (
+    p_projects_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_projects_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS name,
+            c.company_name AS client,
+            50 AS progress, -- Dummy data for now
+            p.expected_close AS deadline,
+            (SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN tasks t ON tm.team_id = t.team_id WHERE t.proposal_id = p.proposal_id) AS team,
+            p.status AS status
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_proposals (
+    p_proposals_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_proposals_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            c.company_name AS client,
+            p.title AS title,
+            p.status AS status,
+            p.value AS value,
+            u.name AS createdBy,
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS date -- Format date for consistency
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id
+        LEFT JOIN
+            users u ON p.pm_user_id = u.user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_meetings (
+    p_meetings_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_meetings_cursor FOR
+        SELECT
+            m.meeting_id AS id,
+            m.subject AS title,
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date,
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS time,
+            (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS attendees,
+            m.meeting_type AS type,
+            m.subject AS location -- Using subject as location for now
+        FROM
+            meetings m;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_all_team_members (
+    p_team_members_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_team_members_cursor FOR
+        SELECT
+            u.user_id AS id,
+            u.name AS name,
+            u.role AS role,
+            u.email AS email,
+            (SELECT COUNT(DISTINCT t.proposal_id) FROM tasks t WHERE t.locked_by = u.user_id) AS projects,
+            tm.allocation_percentage AS workload,
+            'Active' AS status -- Dummy data for now
+        FROM
+            users u
+        JOIN
+            team_members tm ON u.user_id = tm.user_id
+        WHERE
+            u.role IN ('pm', 'developer'); -- Only show PMs and Developers in team management
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_client_dashboard_stats (
+    p_user_id IN NUMBER,
+    p_proposals_count OUT NUMBER,
+    p_active_projects_count OUT NUMBER,
+    p_completed_projects_count OUT NUMBER,
+    p_total_spent OUT NUMBER
+)
+AS
+    v_client_id NUMBER;
+BEGIN
+    -- Get client_id for the given user_id
+    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+
+    -- Total Proposals
+    SELECT COUNT(*) INTO p_proposals_count FROM proposals WHERE client_id = v_client_id;
+
+    -- Active Projects (assuming 'active' status in proposals table means active project)
+    SELECT COUNT(*) INTO p_active_projects_count FROM proposals WHERE client_id = v_client_id AND status = 'active';
+
+    -- Completed Projects (assuming 'completed' status in proposals table means completed project)
+    SELECT COUNT(*) INTO p_completed_projects_count FROM proposals WHERE client_id = v_client_id AND status = 'completed';
+
+    -- Total Spent (sum of value from completed proposals)
+    SELECT NVL(SUM(value), 0) INTO p_total_spent FROM proposals WHERE client_id = v_client_id AND status = 'completed';
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_proposals_count := 0;
+        p_active_projects_count := 0;
+        p_completed_projects_count := 0;
+        p_total_spent := 0;
+    WHEN OTHERS THEN
+        RAISE; -- Re-raise other exceptions
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_client_projects (
+    p_user_id IN NUMBER,
+    p_projects_cursor OUT SYS_REFCURSOR
+)
+AS
+    v_client_id NUMBER;
+BEGIN
+    -- Get client_id for the given user_id
+    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+
+    OPEN p_projects_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS name,
+            50 AS progress, -- Dummy data for now
+            p.status AS status,
+            TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS deadline
+        FROM
+            proposals p
+        WHERE
+            p.client_id = v_client_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_client_proposals (
+    p_user_id IN NUMBER,
+    p_proposals_cursor OUT SYS_REFCURSOR
+)
+AS
+    v_client_id NUMBER;
+BEGIN
+    -- Get client_id for the given user_id
+    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+
+    OPEN p_proposals_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS title,
+            p.value AS amount,
+            p.status AS status,
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS date
+        FROM
+            proposals p
+        WHERE
+            p.client_id = v_client_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_client_invoices (
+    p_user_id IN NUMBER,
+    p_invoices_cursor OUT SYS_REFCURSOR
+)
+AS
+    v_client_id NUMBER;
+BEGIN
+    -- Get client_id for the given user_id
+    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+
+    OPEN p_invoices_cursor FOR
+        SELECT
+            i.invoice_id AS id,
+            NVL(p.title, 'N/A') AS project, -- Use NVL for cases where proposal_id might be null
+            i.amount AS amount,
+            TO_CHAR(i.issue_date, 'YYYY-MM-DD') AS date,
+            i.status AS status
+        FROM
+            invoices i
+        LEFT JOIN
+            proposals p ON i.proposal_id = p.proposal_id
+        WHERE
+            i.client_id = v_client_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_developer_tasks (
+    p_user_id IN NUMBER,
+    p_tasks_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_tasks_cursor FOR
+        SELECT
+            t.task_id AS id,
+            t.title AS title,
+            p.title AS project,
+            TO_CHAR(t.due_date, 'YYYY-MM-DD') AS due,
+            t.status AS status,
+            t.priority AS priority
+        FROM
+            tasks t
+        JOIN
+            proposals p ON t.proposal_id = p.proposal_id
+        WHERE
+            t.locked_by = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pm_dashboard_stats (
+    p_user_id IN NUMBER,
+    p_active_projects_count OUT NUMBER,
+    p_delayed_projects_count OUT NUMBER,
+    p_on_schedule_projects_count OUT NUMBER,
+    p_team_utilization OUT NUMBER
+)
+AS
+BEGIN
+    -- Active Projects: proposals with status 'active' or 'in_progress' managed by this PM
+    SELECT COUNT(*)
+    INTO p_active_projects_count
+    FROM proposals
+    WHERE pm_user_id = p_user_id
+    AND status IN ('active', 'in_progress');
+
+    -- Delayed Projects: active/in-progress proposals with expected_close date in the past
+    SELECT COUNT(*)
+    INTO p_delayed_projects_count
+    FROM proposals
+    WHERE pm_user_id = p_user_id
+    AND status IN ('active', 'in_progress')
+    AND expected_close < SYSDATE;
+
+    -- On Schedule Projects: active/in-progress proposals with expected_close date in the future or today
+    SELECT COUNT(*)
+    INTO p_on_schedule_projects_count
+    FROM proposals
+    WHERE pm_user_id = p_user_id
+    AND status IN ('active', 'in_progress')
+    AND expected_close >= SYSDATE;
+
+    -- Team Utilization (Placeholder)
+    -- For now, we'll set a fixed value or a simple dummy calculation.
+    -- A more accurate calculation would involve joining with team_members and tasks.
+    p_team_utilization := 82; -- Dummy value
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_active_projects_count := 0;
+        p_delayed_projects_count := 0;
+        p_on_schedule_projects_count := 0;
+        p_team_utilization := 0;
+    WHEN OTHERS THEN
+        RAISE; -- Re-raise other exceptions
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pm_projects (
+    p_user_id IN NUMBER,
+    p_projects_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_projects_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS name,
+            c.company_name AS client,
+            NVL(ROUND((p.actual_hours / NULLIF(p.estimated_hours, 0)) * 100), 0) AS progress,
+            TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS deadline,
+            (SELECT COUNT(DISTINCT tm.user_id)
+             FROM tasks t
+             JOIN team_members tm ON t.team_id = tm.team_id
+             WHERE t.proposal_id = p.proposal_id) AS team,
+            p.status AS status -- Add status for filtering/display
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id
+        WHERE
+            p.pm_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pm_milestones (
+    p_user_id IN NUMBER,
+    p_milestones_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_milestones_cursor FOR
+        SELECT
+            t.task_id AS id,
+            t.title AS name,
+            pr.title AS project,
+            t.status AS status,
+            TO_CHAR(t.due_date, 'YYYY-MM-DD') AS dueDate,
+            NVL(u.name, 'Unassigned') AS owner
+        FROM
+            tasks t
+        JOIN
+            proposals pr ON t.proposal_id = pr.proposal_id
+        LEFT JOIN
+            users u ON t.locked_by = u.user_id
+        WHERE
+            pr.pm_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_pm_team (
+    p_user_id IN NUMBER,
+    p_team_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_team_cursor FOR
+        SELECT DISTINCT
+            u.user_id AS id,
+            u.name AS name,
+            u.role AS role,
+            tm.allocation_percentage AS workload
+        FROM
+            users u
+        JOIN
+            team_members tm ON u.user_id = tm.user_id
+        JOIN
+            tasks t ON tm.team_id = t.team_id
+        JOIN
+            proposals p ON t.proposal_id = p.proposal_id
+        WHERE
+            p.pm_user_id = p_user_id
+            AND u.role IN ('developer', 'admin', 'pm', 'sales', 'client'); -- Include relevant roles, assuming 'developer' covers the team roles
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_sales_dashboard_stats (
+    p_user_id IN NUMBER,
+    p_total_leads OUT NUMBER,
+    p_total_clients OUT NUMBER,
+    p_total_proposals OUT NUMBER,
+    p_conversion_rate OUT NUMBER
+)
+AS
+    v_closed_won_leads NUMBER;
+BEGIN
+    -- Total Leads
+    SELECT COUNT(*)
+    INTO p_total_leads
+    FROM leads
+    WHERE sales_user_id = p_user_id;
+
+    -- Total Clients (count distinct clients from approved/completed proposals by this sales user)
+    SELECT COUNT(DISTINCT c.client_id)
+    INTO p_total_clients
+    FROM clients c
+    JOIN proposals p ON c.client_id = p.client_id
+    WHERE p.pm_user_id = p_user_id -- Assuming sales user is also the PM for their proposals
+    AND p.status IN ('approved', 'completed');
+
+    -- Total Proposals (by this sales user)
+    SELECT COUNT(*)
+    INTO p_total_proposals
+    FROM proposals
+    WHERE pm_user_id = p_user_id;
+
+    -- Closed Won Leads
+    SELECT COUNT(*)
+    INTO v_closed_won_leads
+    FROM leads
+    WHERE sales_user_id = p_user_id
+    AND status = 'closed_won';
+
+    -- Conversion Rate
+    IF p_total_leads > 0 THEN
+        p_conversion_rate := ROUND((v_closed_won_leads / p_total_leads) * 100, 2);
+    ELSE
+        p_conversion_rate := 0;
+    END IF;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_total_leads := 0;
+        p_total_clients := 0;
+        p_total_proposals := 0;
+        p_conversion_rate := 0;
+    WHEN OTHERS THEN
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_sales_leads (
+    p_user_id IN NUMBER,
+    p_leads_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_leads_cursor FOR
+        SELECT
+            lead_id AS id,
+            company_name AS company,
+            contact_person AS contact,
+            email,
+            phone,
+            status,
+            estimated_value AS value,
+            source
+        FROM
+            leads
+        WHERE
+            sales_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_sales_clients (
+    p_user_id IN NUMBER,
+    p_clients_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_clients_cursor FOR
+        SELECT DISTINCT
+            c.client_id AS id,
+            c.company_name AS name,
+            (SELECT COUNT(p.proposal_id) FROM proposals p WHERE p.client_id = c.client_id AND p.pm_user_id = p_user_id) AS projects,
+            CASE
+                WHEN EXISTS (SELECT 1 FROM proposals WHERE client_id = c.client_id AND pm_user_id = p_user_id AND status IN ('active', 'approved')) THEN 'Active'
+                ELSE 'Inactive'
+            END AS status
+        FROM
+            clients c
+        JOIN
+            proposals p_join ON c.client_id = p_join.client_id
+        WHERE
+            p_join.pm_user_id = p_user_id; -- Clients whose proposals are managed by this sales user (acting as PM)
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_sales_proposals (
+    p_user_id IN NUMBER,
+    p_proposals_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_proposals_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS title,
+            c.company_name AS client,
+            p.value AS value,
+            p.status AS status
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id
+        WHERE
+            p.pm_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_sales_meetings (
+    p_user_id IN NUMBER,
+    p_meetings_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_meetings_cursor FOR
+        SELECT
+            m.meeting_id AS id,
+            m.subject AS title,
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date,
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS time
+        FROM
+            meetings m
+        JOIN
+            proposals p ON m.proposal_id = p.proposal_id
+        WHERE
+            p.pm_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_admin_dashboard_stats (
+    p_total_clients OUT NUMBER,
+    p_active_projects OUT NUMBER,
+    p_pending_proposals OUT NUMBER,
+    p_active_users OUT NUMBER
+)
+AS
+BEGIN
+    -- Total Clients
+    SELECT COUNT(*) INTO p_total_clients FROM clients;
+
+    -- Active Projects (status 'active' or 'in_progress')
+    SELECT COUNT(*) INTO p_active_projects FROM proposals WHERE status IN ('active', 'in_progress');
+
+    -- Pending Proposals (status 'submitted' or 'draft')
+    SELECT COUNT(*) INTO p_pending_proposals FROM proposals WHERE status IN ('submitted', 'draft');
+
+    -- Active Users
+    SELECT COUNT(*) INTO p_active_users FROM users WHERE is_active = 1;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_total_clients := 0;
+        p_active_projects := 0;
+        p_pending_proposals := 0;
+        p_active_users := 0;
+    WHEN OTHERS THEN
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_project_details (
+    p_project_id IN NUMBER,
+    p_project_details_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_project_details_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS name,
+            c.company_name AS client,
+            p.description AS description,
+            p.status AS status,
+            NVL(ROUND((p.actual_hours / NULLIF(p.estimated_hours, 0)) * 100), 0) AS progress,
+            TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS deadline,
+            p.value AS budget, -- Assuming 'value' from proposals table as budget
+            NVL(p.actual_hours * 50, 0) AS spent -- Dummy calculation: actual_hours * a rate of 50
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id
+        WHERE
+            p.proposal_id = p_project_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_project_team_members (
+    p_project_id IN NUMBER,
+    p_team_members_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_team_members_cursor FOR
+        SELECT DISTINCT
+            u.user_id AS id,
+            u.name AS name,
+            u.role AS role
+        FROM
+            users u
+        JOIN
+            team_members tm ON u.user_id = tm.user_id
+        JOIN
+            tasks t ON tm.team_id = t.team_id
+        WHERE
+            t.proposal_id = p_project_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_project_milestones (
+    p_project_id IN NUMBER,
+    p_milestones_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_milestones_cursor FOR
+        SELECT
+            t.task_id AS id,
+            t.title AS name,
+            t.status AS status,
+            TO_CHAR(t.due_date, 'YYYY-MM-DD') AS dueDate,
+            NVL(u.name, 'Unassigned') AS owner
+        FROM
+            tasks t
+        LEFT JOIN
+            users u ON t.locked_by = u.user_id
+        WHERE
+            t.proposal_id = p_project_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_admin_revenue_data (
+    p_revenue_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_revenue_cursor FOR
+        SELECT
+            TO_CHAR(actual_close, 'Mon') AS month,
+            SUM(value) AS revenue
+        FROM
+            proposals
+        WHERE
+            status = 'completed' AND actual_close IS NOT NULL
+        GROUP BY
+            TO_CHAR(actual_close, 'Mon'), TO_CHAR(actual_close, 'MM')
+        ORDER BY
+            TO_CHAR(actual_close, 'MM');
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_admin_conversion_data (
+    p_leads_count OUT NUMBER,
+    p_proposals_count OUT NUMBER,
+    p_approved_count OUT NUMBER
+)
+AS
+BEGIN
+    SELECT COUNT(*) INTO p_leads_count FROM leads;
+    SELECT COUNT(*) INTO p_proposals_count FROM proposals;
+    SELECT COUNT(*) INTO p_approved_count FROM proposals WHERE status = 'approved';
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_admin_project_status (
+    p_on_time_count OUT NUMBER,
+    p_at_risk_count OUT NUMBER,
+    p_delayed_count OUT NUMBER
+)
+AS
+BEGIN
+    -- On Time Projects
+    SELECT COUNT(*)
+    INTO p_on_time_count
+    FROM proposals
+    WHERE status IN ('active', 'in_progress')
+    AND expected_close >= SYSDATE;
+
+    -- At Risk: Projects in progress with deadline within the next 7 days
+    SELECT COUNT(*)
+    INTO p_at_risk_count
+    FROM proposals
+    WHERE status IN ('active', 'in_progress')
+    AND expected_close >= SYSDATE AND expected_close <= SYSDATE + 7; -- Within next 7 days
+
+    -- Delayed Projects
+    SELECT COUNT(*)
+    INTO p_delayed_count
+    FROM proposals
+    WHERE status IN ('active', 'in_progress')
+    AND expected_close < SYSDATE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_admin_summary_metrics (
+    p_total_revenue OUT NUMBER,
+    p_active_clients OUT NUMBER,
+    p_conversion_rate OUT NUMBER,
+    p_team_utilization OUT NUMBER
+)
+AS
+    v_total_leads NUMBER;
+    v_closed_won_leads NUMBER;
+BEGIN
+    -- Total Revenue
+    SELECT NVL(SUM(value), 0) INTO p_total_revenue FROM proposals WHERE status = 'completed';
+
+    -- Active Clients (count all clients)
+    SELECT COUNT(*) INTO p_active_clients FROM clients;
+
+    -- Conversion Rate (from leads table)
+    SELECT COUNT(*) INTO v_total_leads FROM leads;
+    SELECT COUNT(*) INTO v_closed_won_leads FROM leads WHERE status = 'closed_won';
+    IF v_total_leads > 0 THEN
+        p_conversion_rate := ROUND((v_closed_won_leads / v_total_leads) * 100, 2);
+    ELSE
+        p_conversion_rate := 0;
+    END IF;
+
+    -- Team Utilization (Average of allocation_percentage from all team_members)
+    SELECT NVL(AVG(allocation_percentage), 0) INTO p_team_utilization FROM team_members;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_total_revenue := 0;
+        p_active_clients := 0;
+        p_conversion_rate := 0;
+        p_team_utilization := 0;
+    WHEN OTHERS THEN
+        RAISE;
 END;
 /

@@ -8,7 +8,17 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Edit, CheckCircle } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface Proposal {
+  id: string;
+  client: string;
+  title: string;
+  status: string;
+  value: number;
+  createdBy: string;
+  date: string;
+}
 
 export default function ProposalsPage() {
   const { user, isLoggedIn } = useAuth()
@@ -16,61 +26,77 @@ export default function ProposalsPage() {
   const [currentPath] = useState("/dashboard/admin/proposals")
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchProposals = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/proposals")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setProposals(data)
+      } catch (err) {
+        console.error("Failed to fetch proposals:", err)
+        setError("Failed to load proposals.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProposals()
+  }, [isLoggedIn, user?.role, router])
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
-
-  const proposals = [
-    {
-      id: "P001",
-      client: "Acme Corp",
-      title: "Web Portal Development",
-      status: "Approved",
-      value: 85000,
-      createdBy: "John",
-      date: "2025-01-10",
-    },
-    {
-      id: "P002",
-      client: "Tech Startup",
-      title: "Mobile App",
-      status: "Sent",
-      value: 120000,
-      createdBy: "Sarah",
-      date: "2025-01-12",
-    },
-    {
-      id: "P003",
-      client: "Digital Solutions",
-      title: "Cloud Migration",
-      status: "Draft",
-      value: 150000,
-      createdBy: "Mike",
-      date: "2025-01-15",
-    },
-    {
-      id: "P004",
-      client: "Enterprise Systems",
-      title: "AI Integration",
-      status: "Client Review",
-      value: 95000,
-      createdBy: "Emma",
-      date: "2025-01-18",
-    },
-  ]
 
   const filtered = proposals.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
   const getStatusBadge = (status: string) => {
     const statusStyles: Record<string, string> = {
-      Draft: "bg-muted text-muted-foreground",
-      Sent: "bg-primary/20 text-primary",
-      "Client Review": "bg-chart-1/20 text-chart-1",
-      Approved: "bg-chart-3/20 text-chart-3",
-      Rejected: "bg-destructive/20 text-destructive",
+      "draft": "bg-muted text-muted-foreground",
+      "submitted": "bg-primary/20 text-primary",
+      "client review": "bg-chart-1/20 text-chart-1",
+      "approved": "bg-chart-3/20 text-chart-3",
+      "rejected": "bg-destructive/20 text-destructive",
+      "active": "bg-primary/20 text-primary",
+      "completed": "bg-chart-3/20 text-chart-3",
     }
-    return statusStyles[status] || statusStyles["Draft"]
+    return statusStyles[status.toLowerCase()] || "bg-muted text-muted-foreground" // Default to Draft style
+  }
+
+  // Calculate proposal pipeline stages dynamically
+  const pipelineStages = [
+    { stage: "Draft", count: proposals.filter(p => p.status.toLowerCase() === 'draft').length, color: "bg-muted/20" },
+    { stage: "Submitted", count: proposals.filter(p => p.status.toLowerCase() === 'submitted').length, color: "bg-primary/20" },
+    { stage: "Client Review", count: proposals.filter(p => p.status.toLowerCase() === 'client review').length, color: "bg-chart-1/20" },
+    { stage: "Approved", count: proposals.filter(p => p.status.toLowerCase() === 'approved').length, color: "bg-chart-3/20" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading proposals...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -96,12 +122,7 @@ export default function ProposalsPage() {
         <div className="p-8">
           {/* Proposal Pipeline Stages */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { stage: "Draft", count: 3, color: "bg-muted/20" },
-              { stage: "Sent", count: 5, color: "bg-primary/20" },
-              { stage: "Client Review", count: 2, color: "bg-chart-1/20" },
-              { stage: "Approved", count: 8, color: "bg-chart-3/20" },
-            ].map((item) => (
+            {pipelineStages.map((item) => (
               <Card key={item.stage} className={`bg-card border border-border ${item.color}`}>
                 <CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold text-foreground">{item.count}</p>
@@ -125,7 +146,7 @@ export default function ProposalsPage() {
             <select className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground">
               <option>All Status</option>
               <option>Draft</option>
-              <option>Sent</option>
+              <option>Submitted</option>
               <option>Client Review</option>
               <option>Approved</option>
             </select>

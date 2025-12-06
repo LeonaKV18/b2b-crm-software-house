@@ -40,7 +40,7 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
   } catch (err) {
     // Log the error and re-throw it
     console.error('Database query failed:', err);
-    throw new Error('Database query failed');
+    throw err;
   } finally {
     // Ensure the connection is closed
     if (connection) {

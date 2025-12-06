@@ -1,25 +1,71 @@
 "use client"
-
+import { useState, useEffect } from "react" // Import useState and useEffect
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 
+interface AdminStats {
+  totalClients: number;
+  activeProjects: number;
+  pendingProposals: number;
+  activeUsers: number;
+}
+
 export default function AdminDashboard() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
 
+  const [stats, setStats] = useState<AdminStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     if (typeof window !== "undefined" && (!isLoggedIn || user?.role !== "admin")) {
       router.push("/")
+      return
     }
+
+    const fetchStats = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/admin-dashboard-stats")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setStats(data)
+      } catch (err) {
+        console.error("Failed to fetch admin dashboard stats:", err)
+        setError("Failed to load dashboard statistics.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
   }, [isLoggedIn, user?.role, router])
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading dashboard...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
   }
 
   return (
@@ -49,7 +95,7 @@ export default function AdminDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Total Clients</p>
-                    <p className="text-3xl font-bold text-foreground">48</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.totalClients}</p>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-lg text-2xl">👥</div>
                 </div>
@@ -62,7 +108,7 @@ export default function AdminDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Active Projects</p>
-                    <p className="text-3xl font-bold text-foreground">23</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.activeProjects}</p>
                   </div>
                   <div className="p-3 bg-accent/10 rounded-lg text-2xl">💼</div>
                 </div>
@@ -75,7 +121,7 @@ export default function AdminDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Pending Proposals</p>
-                    <p className="text-3xl font-bold text-foreground">7</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.pendingProposals}</p>
                   </div>
                   <div className="p-3 bg-chart-2/10 rounded-lg text-2xl">📄</div>
                 </div>
@@ -88,7 +134,7 @@ export default function AdminDashboard() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Active Users</p>
-                    <p className="text-3xl font-bold text-foreground">12</p>
+                    <p className="text-3xl font-bold text-foreground">{stats?.activeUsers}</p>
                   </div>
                   <div className="p-3 bg-chart-3/10 rounded-lg text-2xl">👫</div>
                 </div>
@@ -99,7 +145,7 @@ export default function AdminDashboard() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Clients */}
+            {/* Recent Clients Placeholder */}
             <div className="lg:col-span-2">
               <Card className="bg-card border border-border">
                 <CardHeader>
@@ -108,29 +154,7 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {[
-                      { name: "Acme Corp", status: "Active", projects: 3 },
-                      { name: "Tech Startup Inc", status: "Active", projects: 2 },
-                      { name: "Enterprise Systems", status: "Inactive", projects: 1 },
-                      { name: "Digital Solutions", status: "Active", projects: 4 },
-                    ].map((client, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{client.name}</p>
-                          <p className="text-xs text-muted-foreground">{client.projects} projects</p>
-                        </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            client.status === "Active" ? "bg-chart-3/20 text-chart-3" : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {client.status}
-                        </span>
-                      </div>
-                    ))}
+                    <p className="text-muted-foreground">Client data is fetched on the Clients page.</p>
                   </div>
                   <Link href="/dashboard/admin/clients">
                     <Button variant="ghost" className="w-full mt-4 text-primary hover:bg-primary/10">
@@ -141,7 +165,7 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Upcoming Meetings */}
+            {/* Upcoming Meetings Placeholder */}
             <div>
               <Card className="bg-card border border-border">
                 <CardHeader>
@@ -150,16 +174,7 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {[
-                      { title: "Client Review", time: "Today 2PM" },
-                      { title: "Team Standup", time: "Tomorrow 10AM" },
-                      { title: "Project Review", time: "Wed 3PM" },
-                    ].map((meeting, idx) => (
-                      <div key={idx} className="p-3 bg-secondary rounded-lg border border-border">
-                        <p className="text-sm font-medium text-foreground">{meeting.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{meeting.time}</p>
-                      </div>
-                    ))}
+                    <p className="text-muted-foreground">Meeting data is fetched on the Meetings page.</p>
                   </div>
                   <Link href="/dashboard/admin/meetings">
                     <Button variant="ghost" className="w-full mt-4 text-primary hover:bg-primary/10">

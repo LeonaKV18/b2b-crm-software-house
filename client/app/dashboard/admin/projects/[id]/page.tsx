@@ -7,41 +7,145 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Plus } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Import useEffect
+
+interface ProjectDetails {
+  id: string;
+  name: string;
+  client: string;
+  description: string;
+  status: string;
+  progress: number;
+  deadline: string;
+  budget: number;
+  spent: number;
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+  role: string;
+}
+
+interface Milestone {
+  id: number;
+  name: string;
+  status: string;
+  dueDate: string;
+  owner: string;
+}
 
 export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState(`/dashboard/admin/projects/${params.id}`)
 
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchProjectData = async () => {
+      try {
+        setLoading(true)
+        const [projectRes, teamRes, milestonesRes] = await Promise.all([
+          fetch(`/api/project-details/${params.id}`),
+          fetch(`/api/project-team/${params.id}`),
+          fetch(`/api/project-milestones/${params.id}`),
+        ])
+
+        if (!projectRes.ok) throw new Error(`HTTP error! Project details: ${projectRes.status}`)
+        if (!teamRes.ok) throw new Error(`HTTP error! Team members: ${teamRes.status}`)
+        if (!milestonesRes.ok) throw new Error(`HTTP error! Milestones: ${milestonesRes.status}`)
+
+        const projectData = await projectRes.json()
+        const teamData = await teamRes.json()
+        const milestonesData = await milestonesRes.json()
+
+        setProjectDetails(projectData)
+        setTeamMembers(teamData)
+        setMilestones(milestonesData)
+      } catch (err) {
+        console.error("Failed to fetch project data:", err)
+        setError("Failed to load project details.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProjectData()
+  }, [isLoggedIn, user?.role, router, params.id])
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
 
-  const project = {
-    id: params.id,
-    name: "Portal Redesign",
-    client: "Acme Corp",
-    description: "Complete redesign of the client portal with new UI/UX",
-    status: "In Progress",
-    progress: 75,
-    deadline: "2025-03-15",
-    budget: 85000,
-    spent: 63750,
-    team: [
-      { name: "John Doe", role: "PM" },
-      { name: "Sarah Smith", role: "Developer" },
-      { name: "Mike Johnson", role: "Designer" },
-    ],
+  const getProjectStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+      case "in progress": // Map 'in_progress' to 'In Progress' for display
+        return "bg-primary/20 text-primary";
+      case "completed":
+        return "bg-chart-3/20 text-chart-3";
+      case "approved":
+        return "bg-chart-3/20 text-chart-3";
+      case "submitted":
+        return "bg-accent/20 text-accent";
+      case "draft":
+        return "bg-muted text-muted-foreground";
+      case "rejected":
+        return "bg-destructive/20 text-destructive";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getMilestoneStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "done":
+        return "bg-chart-3/20 text-chart-3";
+      case "in_progress":
+        return "bg-primary/20 text-primary";
+      case "todo":
+        return "bg-muted text-muted-foreground";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading project details...</p>
+      </div>
+    )
   }
 
-  const milestones = [
-    { id: 1, name: "Design Mockups", status: "Completed", dueDate: "2025-01-15", owner: "Mike Johnson" },
-    { id: 2, name: "Frontend Development", status: "In Progress", dueDate: "2025-02-15", owner: "Sarah Smith" },
-    { id: 3, name: "Backend Integration", status: "Pending", dueDate: "2025-03-01", owner: "John Doe" },
-    { id: 4, name: "Testing & QA", status: "Pending", dueDate: "2025-03-10", owner: "Team" },
-  ]
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
+
+  if (!projectDetails) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-muted-foreground">Project not found.</p>
+      </div>
+    )
+  }
+
+  const project = projectDetails; // Use fetched data
 
   return (
     <div className="flex h-screen bg-background">
@@ -100,8 +204,8 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Status</p>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary">
-                        {project.status}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getProjectStatusBadge(project.status)}`}>
+                        {project.status === "in_progress" ? "In Progress" : project.status}
                       </span>
                     </div>
                   </div>
@@ -127,13 +231,13 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
                   <div className="flex justify-between mb-2">
                     <p className="text-xs text-muted-foreground">Utilization</p>
                     <p className="text-xs font-bold text-foreground">
-                      {Math.round((project.spent / project.budget) * 100)}%
+                      {project.budget > 0 ? Math.round((project.spent / project.budget) * 100) : 0}%
                     </p>
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div
                       className="bg-chart-3 h-2 rounded-full transition-all"
-                      style={{ width: `${(project.spent / project.budget) * 100}%` }}
+                      style={{ width: `${project.budget > 0 ? (project.spent / project.budget) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -159,17 +263,21 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {project.team.map((member, idx) => (
-                    <div
-                      key={idx}
-                      className="p-3 bg-secondary rounded-lg border border-border flex justify-between items-center"
-                    >
-                      <div>
-                        <p className="font-medium text-foreground">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.role}</p>
+                  {teamMembers.length === 0 ? (
+                    <p className="text-muted-foreground">No team members assigned to this project.</p>
+                  ) : (
+                    teamMembers.map((member) => (
+                      <div
+                        key={member.id}
+                        className="p-3 bg-secondary rounded-lg border border-border flex justify-between items-center"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.role}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -187,25 +295,23 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {milestones.map((milestone) => (
-                    <div key={milestone.id} className="p-3 bg-secondary rounded-lg border border-border">
-                      <div className="flex justify-between items-start mb-2">
-                        <p className="font-medium text-foreground">{milestone.name}</p>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            milestone.status === "Completed"
-                              ? "bg-chart-3/20 text-chart-3"
-                              : milestone.status === "In Progress"
-                                ? "bg-primary/20 text-primary"
-                                : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {milestone.status}
-                        </span>
+                  {milestones.length === 0 ? (
+                    <p className="text-muted-foreground">No milestones found for this project.</p>
+                  ) : (
+                    milestones.map((milestone) => (
+                      <div key={milestone.id} className="p-3 bg-secondary rounded-lg border border-border">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-medium text-foreground">{milestone.name}</p>
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${getMilestoneStatusBadge(milestone.status)}`}
+                          >
+                            {milestone.status === "in_progress" ? "In Progress" : milestone.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Due: {milestone.dueDate}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{milestone.dueDate}</p>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

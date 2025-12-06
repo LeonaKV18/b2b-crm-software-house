@@ -8,7 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search, Plus, Eye, Mail, X } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react" // Ensure useEffect is imported
+
+interface Client {
+  id: number;
+  name: string;
+  company: string;
+  contact: string;
+  status: string;
+  email: string;
+  phone: string;
+  projects: number;
+  lastInteraction: string;
+}
 
 export default function ClientsPage() {
   const { user, isLoggedIn } = useAuth()
@@ -16,81 +28,79 @@ export default function ClientsPage() {
   const [currentPath] = useState("/dashboard/admin/clients")
   const [searchTerm, setSearchTerm] = useState("")
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedClient, setSelectedClient] = useState(null)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
   const [messageText, setMessageText] = useState("")
 
+  const [clients, setClients] = useState<Client[]>([]) // State for clients data
+  const [loading, setLoading] = useState(true) // Loading state
+  const [error, setError] = useState<string | null>(null) // Error state
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "admin") {
+      router.push("/")
+      return
+    }
+
+    const fetchClients = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/clients")
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setClients(data)
+      } catch (err) {
+        console.error("Failed to fetch clients:", err)
+        setError("Failed to load clients.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchClients()
+  }, [isLoggedIn, user?.role, router]) // Depend on login status and user role
+
   if (!isLoggedIn || user?.role !== "admin") {
-    router.push("/")
     return null
   }
 
-  const clients = [
-    {
-      id: 1,
-      name: "Acme Corp",
-      company: "Acme Corporation",
-      contact: "John Smith",
-      status: "Active",
-      email: "john@acme.com",
-      phone: "+1-555-0101",
-      projects: 3,
-      lastInteraction: "2 days ago",
-    },
-    {
-      id: 2,
-      name: "Tech Startup Inc",
-      company: "Tech Startup",
-      contact: "Sarah Lee",
-      status: "Active",
-      email: "sarah@techstartup.com",
-      phone: "+1-555-0102",
-      projects: 2,
-      lastInteraction: "5 days ago",
-    },
-    {
-      id: 3,
-      name: "Enterprise Systems",
-      company: "Enterprise",
-      contact: "Mike Johnson",
-      status: "Inactive",
-      email: "mike@enterprise.com",
-      phone: "+1-555-0103",
-      projects: 1,
-      lastInteraction: "3 weeks ago",
-    },
-    {
-      id: 4,
-      name: "Digital Solutions",
-      company: "DigitalSol",
-      contact: "Emma Wilson",
-      status: "Active",
-      email: "emma@digitalsol.com",
-      phone: "+1-555-0104",
-      projects: 4,
-      lastInteraction: "1 day ago",
-    },
-  ]
-
   const filtered = clients.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
-  const handleViewDetails = (client) => {
+  const handleViewDetails = (client: Client) => {
     setSelectedClient(client)
     setShowDetailsModal(true)
   }
 
-  const handleMessage = (client) => {
+  const handleMessage = (client: Client) => {
     setSelectedClient(client)
     setShowMessageModal(true)
   }
 
   const handleSendMessage = () => {
     if (messageText.trim()) {
-      console.log(`Message sent to ${selectedClient.name}: ${messageText}`)
+      console.log(`Message sent to ${selectedClient?.name}: ${messageText}`)
       setMessageText("")
       setShowMessageModal(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading clients...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
   }
 
   return (

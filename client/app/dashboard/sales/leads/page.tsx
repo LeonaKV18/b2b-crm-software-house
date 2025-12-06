@@ -1,5 +1,5 @@
 "use client"
-
+import { useState, useEffect } from "react" // Import useEffect
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
@@ -8,7 +8,17 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Search, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+
+interface Lead {
+  id: number;
+  company: string;
+  contact: string;
+  email: string;
+  phone: string;
+  status: string;
+  value: number; // Value is now a number from the database
+  source: string;
+}
 
 export default function LeadsPage() {
   const { user, isLoggedIn } = useAuth()
@@ -16,55 +26,96 @@ export default function LeadsPage() {
   const [currentPath] = useState("/dashboard/sales/leads")
   const [searchTerm, setSearchTerm] = useState("")
 
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn || user?.role !== "sales") {
+      router.push("/")
+      return
+    }
+
+    const fetchLeads = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch(`/api/sales-leads?userId=${user?.id}`)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data = await response.json()
+        setLeads(data)
+      } catch (err) {
+        console.error("Failed to fetch sales leads:", err)
+        setError("Failed to load leads.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user?.id) { // Only fetch if user ID is available
+      fetchLeads()
+    }
+  }, [isLoggedIn, user?.role, user?.id, router])
+
   if (!isLoggedIn || user?.role !== "sales") {
     router.push("/")
     return null
   }
 
-  const leads = [
-    {
-      id: 1,
-      company: "StartUp AI",
-      contact: "Jane Smith",
-      email: "jane@startup-ai.com",
-      phone: "+1-555-1001",
-      status: "New",
-      value: "$50K",
-      source: "LinkedIn",
-    },
-    {
-      id: 2,
-      company: "Digital Labs",
-      contact: "Tom Brown",
-      email: "tom@digitallabs.com",
-      phone: "+1-555-1002",
-      status: "Qualified",
-      value: "$75K",
-      source: "Referral",
-    },
-    {
-      id: 3,
-      company: "Tech Venture",
-      contact: "Lisa Wong",
-      email: "lisa@techventure.com",
-      phone: "+1-555-1003",
-      status: "Contacted",
-      value: "$100K",
-      source: "Website",
-    },
-    {
-      id: 4,
-      company: "Cloud Systems",
-      contact: "Mark Davis",
-      email: "mark@cloudsys.com",
-      phone: "+1-555-1004",
-      status: "Proposal Sent",
-      value: "$120K",
-      source: "Event",
-    },
-  ]
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "new":
+        return "bg-muted text-muted-foreground";
+      case "contacted":
+        return "bg-chart-3/20 text-chart-3";
+      case "qualified":
+        return "bg-accent/20 text-accent";
+      case "proposal_sent":
+        return "bg-primary/20 text-primary";
+      case "negotiating":
+        return "bg-yellow-500/20 text-yellow-500"; // Assuming yellow for negotiating
+      case "closed_won":
+        return "bg-green-600/20 text-green-600";
+      case "closed_lost":
+        return "bg-destructive/20 text-destructive";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
+
+  const getDisplayStatus = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "new": return "New";
+      case "contacted": return "Contacted";
+      case "qualified": return "Qualified";
+      case "proposal_sent": return "Proposal Sent";
+      case "negotiating": return "Negotiating";
+      case "closed_won": return "Closed Won";
+      case "closed_lost": return "Closed Lost";
+      default: return status;
+    }
+  };
+
 
   const filtered = leads.filter((l) => l.company.toLowerCase().includes(searchTerm.toLowerCase()))
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-foreground">Loading leads...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <p className="text-destructive">{error}</p>
+      </div>
+    )
+  }
+
 
   return (
     <div className="flex h-screen bg-background">
@@ -100,53 +151,53 @@ export default function LeadsPage() {
 
           {/* Leads Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((lead) => (
-              <Card key={lead.id} className="bg-card border border-border hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="font-bold text-foreground text-lg">{lead.company}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{lead.contact}</p>
+            {filtered.length === 0 ? (
+              <p className="text-muted-foreground">No leads found for this sales user.</p>
+            ) : (
+              filtered.map((lead) => (
+                <Card key={lead.id} className="bg-card border border-border hover:border-primary/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <p className="font-bold text-foreground text-lg">{lead.company}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{lead.contact}</p>
+                      </div>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadge(
+                          lead.status
+                        )}`}
+                      >
+                        {getDisplayStatus(lead.status)}
+                      </span>
                     </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                        lead.status === "Proposal Sent"
-                          ? "bg-primary/20 text-primary"
-                          : lead.status === "Qualified"
-                            ? "bg-accent/20 text-accent"
-                            : lead.status === "Contacted"
-                              ? "bg-chart-3/20 text-chart-3"
-                              : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {lead.status}
-                    </span>
-                  </div>
 
-                  <div className="space-y-2 mb-4 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail size={16} />
-                      {lead.email}
+                    <div className="space-y-2 mb-4 text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail size={16} />
+                        {lead.email}
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone size={16} />
+                        {lead.phone}
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin size={16} />
+                        {lead.source}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone size={16} />
-                      {lead.phone}
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin size={16} />
-                      {lead.source}
-                    </div>
-                  </div>
 
-                  <div className="py-3 border-t border-border mb-4">
-                    <p className="text-sm font-bold text-foreground">{lead.value}</p>
-                    <p className="text-xs text-muted-foreground">Estimated value</p>
-                  </div>
+                    <div className="py-3 border-t border-border mb-4">
+                      <p className="text-sm font-bold text-foreground">
+                        ${lead.value ? lead.value.toLocaleString() : "0"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Estimated value</p>
+                    </div>
 
-                  <Button className="w-full bg-primary hover:bg-primary/90">View Details</Button>
-                </CardContent>
-              </Card>
-            ))}
+                    <Button className="w-full bg-primary hover:bg-primary/90">View Details</Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Navigation */}
