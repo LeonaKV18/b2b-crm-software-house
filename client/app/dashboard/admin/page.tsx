@@ -81,9 +81,7 @@ export default function AdminDashboard() {
               <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
               <p className="text-sm text-muted-foreground">Welcome back, {user?.name}</p>
             </div>
-            <Link href="/dashboard/admin/clients">
-              <Button className="bg-primary hover:bg-primary/90">+ Add Client</Button>
-            </Link>
+
           </div>
         </div>
 

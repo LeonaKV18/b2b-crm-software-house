@@ -167,13 +167,7 @@ export default function ClientsPage() {
               <h1 className="text-2xl font-bold text-foreground">Clients</h1>
               <p className="text-sm text-muted-foreground">Manage all clients and relationships</p>
             </div>
-            <Button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-primary hover:bg-primary/90 flex items-center gap-2"
-            >
-              <Plus size={20} />
-              Add Client
-            </Button>
+
           </div>
         </div>
 

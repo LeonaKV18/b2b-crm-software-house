@@ -56,6 +56,7 @@
     "react-day-picker": "9.8.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.60.0",
+    "react-is": "^19.2.1",
     "react-resizable-panels": "^2.1.7",
     "recharts": "latest",
     "sonner": "^1.7.4",
@@ -69,12 +70,12 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "eslint": "^9.8.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5",
-    "eslint": "^9.8.0",
-    "@typescript-eslint/parser": "latest",
-    "@typescript-eslint/eslint-plugin": "latest"
+    "typescript": "^5"
   }
 }
