@@ -25,37 +25,90 @@ export default function ProjectsPage() {
   const [currentPath] = useState("/dashboard/admin/projects")
 
   const [projects, setProjects] = useState<Project[]>([])
+  const [clients, setClients] = useState<{ id: number; name: string }[]>([]) // State for clients dropdown
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Form State
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newProjectTitle, setNewProjectTitle] = useState("")
+  const [newProjectClientId, setNewProjectClientId] = useState("")
+  const [newProjectDescription, setNewProjectDescription] = useState("")
+  const [newProjectValue, setNewProjectValue] = useState("")
+  const [newProjectDeadline, setNewProjectDeadline] = useState("")
+  const [newProjectStatus, setNewProjectStatus] = useState("active")
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [projectsRes, clientsRes] = await Promise.all([
+        fetch("/api/projects"),
+        fetch("/api/clients")
+      ])
+
+      if (!projectsRes.ok) throw new Error(`HTTP error! Projects: ${projectsRes.status}`)
+      // Clients fetch might fail if no clients, but we should handle it gracefully
+      
+      const projectsData = await projectsRes.json()
+      setProjects(projectsData)
+
+      if (clientsRes.ok) {
+        const clientsData = await clientsRes.json()
+        setClients(clientsData)
+      }
+    } catch (err) {
+      console.error("Failed to fetch data:", err)
+      setError("Failed to load data.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
       router.push("/")
       return
     }
-
-    const fetchProjects = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/projects")
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setProjects(data)
-      } catch (err) {
-        console.error("Failed to fetch projects:", err)
-        setError("Failed to load projects.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchProjects()
+    fetchData()
   }, [isLoggedIn, user?.role, router])
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
+  }
+
+  const handleCreateProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch("/api/projects/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: newProjectClientId,
+          title: newProjectTitle,
+          description: newProjectDescription,
+          value: newProjectValue,
+          deadline: newProjectDeadline,
+          status: newProjectStatus,
+        }),
+      })
+
+      if (response.ok) {
+        setShowAddForm(false)
+        setNewProjectTitle("")
+        setNewProjectClientId("")
+        setNewProjectDescription("")
+        setNewProjectValue("")
+        setNewProjectDeadline("")
+        setNewProjectStatus("active")
+        fetchData() // Refresh list
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to create project: ${errorData.error}`)
+      }
+    } catch (err) {
+      console.error("Error creating project:", err)
+      alert("An error occurred while creating the project.")
+    }
   }
 
   if (loading) {
@@ -86,7 +139,10 @@ export default function ProjectsPage() {
               <h1 className="text-2xl font-bold text-foreground">Projects</h1>
               <p className="text-sm text-muted-foreground">All active and archived projects</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+            <Button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+            >
               <Plus size={20} />
               New Project
             </Button>
@@ -95,6 +151,100 @@ export default function ProjectsPage() {
 
         {/* Main Content */}
         <div className="p-8">
+          {/* Add Project Form */}
+          {showAddForm && (
+            <Card className="bg-card border border-border mb-8">
+              <CardHeader>
+                <CardTitle className="text-foreground">Create New Project</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCreateProject} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-foreground mb-1 block">Project Title</label>
+                    <Input
+                      placeholder="e.g. Website Redesign"
+                      value={newProjectTitle}
+                      onChange={(e) => setNewProjectTitle(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Client</label>
+                    <select
+                      value={newProjectClientId}
+                      onChange={(e) => setNewProjectClientId(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm h-9"
+                    >
+                      <option value="">Select Client</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Budget Value ($)</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={newProjectValue}
+                      onChange={(e) => setNewProjectValue(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Deadline</label>
+                    <Input
+                      type="date"
+                      value={newProjectDeadline}
+                      onChange={(e) => setNewProjectDeadline(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Status</label>
+                    <select
+                      value={newProjectStatus}
+                      onChange={(e) => setNewProjectStatus(e.target.value)}
+                      className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary text-sm h-9"
+                    >
+                      <option value="active">Active</option>
+                      <option value="draft">Draft</option>
+                      <option value="submitted">Submitted</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
+                    <textarea
+                      value={newProjectDescription}
+                      onChange={(e) => setNewProjectDescription(e.target.value)}
+                      placeholder="Project details..."
+                      className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex gap-2">
+                    <Button type="submit" className="bg-primary hover:bg-primary/90">
+                      Create Project
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowAddForm(false)}
+                      className="bg-secondary border-border"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Project Cards Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {projects.map((project) => (

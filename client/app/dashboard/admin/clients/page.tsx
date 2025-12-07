@@ -36,38 +36,53 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]) // State for clients data
   const [loading, setLoading] = useState(true) // Loading state
   const [error, setError] = useState<string | null>(null) // Error state
+  const [statusFilter, setStatusFilter] = useState("All Status") // Status filter state
+
+  // Form State
+  const [newClientName, setNewClientName] = useState("")
+  const [newClientCompany, setNewClientCompany] = useState("")
+  const [newClientContact, setNewClientContact] = useState("")
+  const [newClientEmail, setNewClientEmail] = useState("")
+  const [newClientPhone, setNewClientPhone] = useState("")
+  const [newClientPassword, setNewClientPassword] = useState("")
+  const [newClientStatus, setNewClientStatus] = useState("Active")
+
+  const fetchClients = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/clients")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setClients(data)
+    } catch (err) {
+      console.error("Failed to fetch clients:", err)
+      setError("Failed to load clients.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
       router.push("/")
       return
     }
-
-    const fetchClients = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/clients")
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setClients(data)
-      } catch (err) {
-        console.error("Failed to fetch clients:", err)
-        setError("Failed to load clients.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchClients()
-  }, [isLoggedIn, user?.role, router]) // Depend on login status and user role
+  }, [isLoggedIn, user?.role, router])
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
   }
 
-  const filtered = clients.filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filtered = clients.filter((c) => {
+    const matchesSearch = (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (c.company || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (c.email || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "All Status" || c.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  })
 
   const handleViewDetails = (client: Client) => {
     setSelectedClient(client)
@@ -84,6 +99,43 @@ export default function ClientsPage() {
       console.log(`Message sent to ${selectedClient?.name}: ${messageText}`)
       setMessageText("")
       setShowMessageModal(false)
+    }
+  }
+
+  const handleCreateClient = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch("/api/clients/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newClientName,
+          company: newClientCompany,
+          contact: newClientContact, // Note: The API currently expects 'name' to be the contact person too or splits it. Adjusting to match procedure logic where name is used for user/contact.
+          email: newClientEmail,
+          phone: newClientPhone,
+          password: newClientPassword,
+          status: newClientStatus,
+        }),
+      })
+
+      if (response.ok) {
+        setShowAddForm(false)
+        setNewClientName("")
+        setNewClientCompany("")
+        setNewClientContact("")
+        setNewClientEmail("")
+        setNewClientPhone("")
+        setNewClientPassword("")
+        setNewClientStatus("Active")
+        fetchClients() // Refresh list
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to create client: ${errorData.error}`)
+      }
+    } catch (err) {
+      console.error("Error creating client:", err)
+      alert("An error occurred while creating the client.")
     }
   }
 
@@ -134,16 +186,56 @@ export default function ClientsPage() {
                 <CardTitle className="text-foreground">Add New Client</CardTitle>
               </CardHeader>
               <CardContent>
-                <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input placeholder="Client Name" className="bg-secondary border-border" />
-                  <Input placeholder="Company" className="bg-secondary border-border" />
-                  <Input placeholder="Primary Contact" className="bg-secondary border-border" />
-                  <Input placeholder="Email" type="email" className="bg-secondary border-border" />
-                  <Input placeholder="Phone" className="bg-secondary border-border" />
-                  <select className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option>Status</option>
-                    <option>Active</option>
-                    <option>Inactive</option>
+                <form onSubmit={handleCreateClient} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Client Name (User Name)"
+                    value={newClientName}
+                    onChange={(e) => setNewClientName(e.target.value)}
+                    required
+                    className="bg-secondary border-border"
+                  />
+                  <Input
+                    placeholder="Company"
+                    value={newClientCompany}
+                    onChange={(e) => setNewClientCompany(e.target.value)}
+                    required
+                    className="bg-secondary border-border"
+                  />
+                  <Input
+                    placeholder="Primary Contact (if different)"
+                    value={newClientContact}
+                    onChange={(e) => setNewClientContact(e.target.value)}
+                    className="bg-secondary border-border"
+                  />
+                  <Input
+                    placeholder="Email"
+                    type="email"
+                    value={newClientEmail}
+                    onChange={(e) => setNewClientEmail(e.target.value)}
+                    required
+                    className="bg-secondary border-border"
+                  />
+                  <Input
+                    placeholder="Phone"
+                    value={newClientPhone}
+                    onChange={(e) => setNewClientPhone(e.target.value)}
+                    className="bg-secondary border-border"
+                  />
+                  <Input
+                    placeholder="Password"
+                    type="password"
+                    value={newClientPassword}
+                    onChange={(e) => setNewClientPassword(e.target.value)}
+                    required
+                    className="bg-secondary border-border"
+                  />
+                  <select
+                    value={newClientStatus}
+                    onChange={(e) => setNewClientStatus(e.target.value)}
+                    className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
                   </select>
                   <div className="md:col-span-2 flex gap-2">
                     <Button type="submit" className="bg-primary hover:bg-primary/90">
@@ -174,10 +266,14 @@ export default function ClientsPage() {
                 className="pl-10 bg-secondary border-border"
               />
             </div>
-            <select className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground">
-              <option>All Status</option>
-              <option>Active</option>
-              <option>Inactive</option>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="All Status">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
             </select>
           </div>
 
@@ -219,12 +315,6 @@ export default function ClientsPage() {
                         <td className="py-3 px-4 text-sm text-muted-foreground">{client.lastInteraction}</td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => handleViewDetails(client)}
-                              className="p-1 hover:bg-secondary rounded transition-colors"
-                            >
-                              <Eye size={16} className="text-muted-foreground hover:text-foreground" />
-                            </button>
                             <button
                               onClick={() => handleMessage(client)}
                               className="p-1 hover:bg-secondary rounded transition-colors"

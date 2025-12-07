@@ -30,15 +30,15 @@ AS
 BEGIN
     OPEN p_clients_cursor FOR
         SELECT
-            c.client_id AS id,
-            c.company_name AS name,
-            c.company_name AS company,
-            con.full_name AS contact,
-            'Active' as status, -- Dummy data
-            con.email AS email,
-            con.phone AS phone,
-            (SELECT COUNT(*) FROM proposals WHERE client_id = c.client_id) AS projects,
-            '2 days ago' as lastInteraction -- Dummy data
+            c.client_id AS "id",
+            c.company_name AS "name",
+            c.company_name AS "company",
+            con.full_name AS "contact",
+            'Active' as "status", -- Dummy data
+            con.email AS "email",
+            con.phone AS "phone",
+            (SELECT COUNT(*) FROM proposals WHERE client_id = c.client_id) AS "projects",
+            '2 days ago' as "lastInteraction" -- Dummy data
         FROM
             clients c
         LEFT JOIN
@@ -53,13 +53,13 @@ AS
 BEGIN
     OPEN p_projects_cursor FOR
         SELECT
-            p.proposal_id AS id,
-            p.title AS name,
-            c.company_name AS client,
-            50 AS progress, -- Dummy data for now
-            p.expected_close AS deadline,
-            (SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN tasks t ON tm.team_id = t.team_id WHERE t.proposal_id = p.proposal_id) AS team,
-            p.status AS status
+            p.proposal_id AS "id",
+            p.title AS "name",
+            c.company_name AS "client",
+            50 AS "progress", -- Dummy data for now
+            p.expected_close AS "deadline",
+            (SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN tasks t ON tm.team_id = t.team_id WHERE t.proposal_id = p.proposal_id) AS "team",
+            p.status AS "status"
         FROM
             proposals p
         JOIN
@@ -74,13 +74,13 @@ AS
 BEGIN
     OPEN p_proposals_cursor FOR
         SELECT
-            p.proposal_id AS id,
-            c.company_name AS client,
-            p.title AS title,
-            p.status AS status,
-            p.value AS value,
-            u.name AS createdBy,
-            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS date -- Format date for consistency
+            p.proposal_id AS "id",
+            c.company_name AS "client",
+            p.title AS "title",
+            p.status AS "status",
+            p.value AS "value",
+            u.name AS "createdBy",
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
         FROM
             proposals p
         JOIN
@@ -735,6 +735,64 @@ EXCEPTION
         p_conversion_rate := 0;
         p_team_utilization := 0;
     WHEN OTHERS THEN
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE create_client (
+    p_name IN VARCHAR2,
+    p_company IN VARCHAR2,
+    p_contact_name IN VARCHAR2,
+    p_email IN VARCHAR2,
+    p_phone IN VARCHAR2,
+    p_password IN VARCHAR2,
+    p_status IN VARCHAR2,
+    p_client_id OUT NUMBER
+)
+AS
+    v_user_id NUMBER;
+BEGIN
+    -- 1. Create User
+    INSERT INTO users (role, email, name, password, is_active)
+    VALUES ('client', p_email, p_name, p_password, 1)
+    RETURNING user_id INTO v_user_id;
+
+    -- 2. Create Client
+    INSERT INTO clients (user_id, company_name)
+    VALUES (v_user_id, p_company)
+    RETURNING client_id INTO p_client_id;
+
+    -- 3. Create Primary Contact
+    INSERT INTO contacts (user_id, client_id, full_name, email, phone, contact_type)
+    VALUES (v_user_id, p_client_id, p_contact_name, p_email, p_phone, 'primary');
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE create_project (
+    p_client_id IN NUMBER,
+    p_title IN VARCHAR2,
+    p_description IN CLOB,
+    p_value IN NUMBER,
+    p_deadline IN DATE,
+    p_status IN VARCHAR2,
+    p_proposal_id OUT NUMBER
+)
+AS
+BEGIN
+    INSERT INTO proposals (client_id, title, description, value, expected_close, status, created_at)
+    VALUES (p_client_id, p_title, p_description, p_value, p_deadline, p_status, SYSDATE)
+    RETURNING proposal_id INTO p_proposal_id;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
         RAISE;
 END;
 /
