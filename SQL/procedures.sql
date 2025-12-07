@@ -908,3 +908,25 @@ EXCEPTION
         RAISE;
 END;
 /
+
+CREATE OR REPLACE PROCEDURE get_pm_meetings (
+    p_user_id IN NUMBER,
+    p_meetings_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_meetings_cursor FOR
+        SELECT
+            m.meeting_id AS "id",
+            m.subject AS "title",
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
+            (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS "attendees"
+        FROM
+            meetings m
+        JOIN
+            proposals p ON m.proposal_id = p.proposal_id
+        WHERE
+            p.pm_user_id = p_user_id;
+END;
+/
