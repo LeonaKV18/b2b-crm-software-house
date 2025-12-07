@@ -34,6 +34,15 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
 
     // Return outBinds if they exist and are not empty, otherwise return rows
     if (result.outBinds && Object.keys(result.outBinds).length > 0) {
+      for (const key of Object.keys(result.outBinds)) {
+        const boundValue = result.outBinds[key];
+        if (boundValue instanceof oracledb.ResultSet) {
+          const resultSet = boundValue as oracledb.ResultSet<any>;
+          const rows = await resultSet.getRows();
+          await resultSet.close();
+          result.outBinds[key] = rows;
+        }
+      }
       return result.outBinds;
     }
     return result.rows;
