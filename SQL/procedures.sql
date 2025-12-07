@@ -267,6 +267,54 @@ EXCEPTION
 END;
 /
 
+CREATE OR REPLACE PROCEDURE get_developer_meetings (
+    p_user_id IN NUMBER,
+    p_meetings_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_meetings_cursor FOR
+        SELECT
+            m.meeting_id AS "id",
+            m.subject AS "title",
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
+            m.meeting_type AS "type",
+            m.subject AS "location" -- Using subject/placeholder for location
+        FROM
+            meetings m
+        JOIN
+            meeting_participants mp ON m.meeting_id = mp.meeting_id
+        WHERE
+            mp.user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_developer_milestones (
+    p_user_id IN NUMBER,
+    p_milestones_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_milestones_cursor FOR
+        SELECT
+            t.task_id AS "id",
+            t.title AS "name",
+            p.title AS "project",
+            t.status AS "status",
+            TO_CHAR(t.due_date, 'YYYY-MM-DD') AS "dueDate",
+            t.priority AS "priority"
+        FROM
+            tasks t
+        JOIN
+            proposals p ON t.proposal_id = p.proposal_id
+        WHERE
+            t.locked_by = p_user_id
+        ORDER BY
+            t.due_date ASC;
+END;
+/
+
 CREATE OR REPLACE PROCEDURE get_client_invoices (
     p_user_id IN NUMBER,
     p_invoices_cursor OUT SYS_REFCURSOR
