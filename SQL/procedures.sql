@@ -204,15 +204,40 @@ BEGIN
 
     OPEN p_proposals_cursor FOR
         SELECT
-            p.proposal_id AS id,
-            p.title AS title,
-            p.value AS amount,
-            p.status AS status,
-            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS date
+            p.proposal_id AS "id",
+            p.title AS "title",
+            p.value AS "amount",
+            p.status AS "status",
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
         FROM
             proposals p
         WHERE
             p.client_id = v_client_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE create_client_proposal (
+    p_user_id IN NUMBER,
+    p_title IN VARCHAR2,
+    p_description IN CLOB,
+    p_value IN NUMBER,
+    p_proposal_id OUT NUMBER
+)
+AS
+    v_client_id NUMBER;
+BEGIN
+    -- Get client_id for the given user_id
+    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+
+    INSERT INTO proposals (client_id, title, description, value, status, created_at)
+    VALUES (v_client_id, p_title, p_description, p_value, 'submitted', SYSDATE)
+    RETURNING proposal_id INTO p_proposal_id;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
 END;
 /
 

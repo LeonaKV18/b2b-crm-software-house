@@ -111,10 +111,7 @@ export default function ProposalsPage() {
               <h1 className="text-2xl font-bold text-foreground">Proposals</h1>
               <p className="text-sm text-muted-foreground">Manage proposal lifecycle: Draft → Sent → Approved</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
-              <Plus size={20} />
-              Create Proposal
-            </Button>
+            {/* Create Proposal Button removed as per user request */}
           </div>
         </div>
 
