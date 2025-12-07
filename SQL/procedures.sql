@@ -635,10 +635,10 @@ AS
 BEGIN
     OPEN p_meetings_cursor FOR
         SELECT
-            m.meeting_id AS id,
-            m.subject AS title,
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date,
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS time
+            m.meeting_id AS "id",
+            m.subject AS "title",
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time"
         FROM
             meetings m
         JOIN
