@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react" // Import useState and useEffect
+import { Briefcase, FileText, Users, Clock } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
@@ -97,7 +98,9 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground mb-2">Total Clients</p>
                     <p className="text-3xl font-bold text-foreground">{stats?.totalClients}</p>
                   </div>
-                  <div className="p-3 bg-primary/10 rounded-lg text-2xl">👥</div>
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Users className="text-primary" size={24} />
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">+2 this month</p>
               </CardContent>
@@ -110,7 +113,9 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground mb-2">Active Projects</p>
                     <p className="text-3xl font-bold text-foreground">{stats?.activeProjects}</p>
                   </div>
-                  <div className="p-3 bg-accent/10 rounded-lg text-2xl">💼</div>
+                  <div className="p-3 bg-accent/10 rounded-lg">
+                    <Briefcase className="text-accent" size={24} />
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">8 on track</p>
               </CardContent>
@@ -123,7 +128,9 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground mb-2">Pending Proposals</p>
                     <p className="text-3xl font-bold text-foreground">{stats?.pendingProposals}</p>
                   </div>
-                  <div className="p-3 bg-chart-2/10 rounded-lg text-2xl">📄</div>
+                  <div className="p-3 bg-chart-2/10 rounded-lg">
+                    <FileText className="text-chart-2" size={24} />
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">$245K pipeline</p>
               </CardContent>
@@ -136,7 +143,9 @@ export default function AdminDashboard() {
                     <p className="text-sm text-muted-foreground mb-2">Active Users</p>
                     <p className="text-3xl font-bold text-foreground">{stats?.activeUsers}</p>
                   </div>
-                  <div className="p-3 bg-chart-3/10 rounded-lg text-2xl">👫</div>
+                  <div className="p-3 bg-chart-3/10 rounded-lg">
+                    <Users className="text-chart-3" size={24} />
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-4">All online</p>
               </CardContent>
@@ -169,7 +178,10 @@ export default function AdminDashboard() {
             <div>
               <Card className="bg-card border border-border">
                 <CardHeader>
-                  <CardTitle className="text-foreground flex items-center gap-2">⏰ Upcoming</CardTitle>
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Clock className="text-muted-foreground" size={24} />
+                    Upcoming
+                  </CardTitle>
                   <CardDescription>Next 7 days</CardDescription>
                 </CardHeader>
                 <CardContent>

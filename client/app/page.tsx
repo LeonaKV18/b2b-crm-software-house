@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
+import { Eye, EyeOff } from "lucide-react"
 import { useAuth, type UserRole } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -137,7 +137,7 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      {showPassword ? "🙈" : "👁️"}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>

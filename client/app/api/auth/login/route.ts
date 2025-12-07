@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         name: p_name,
         role: p_role as UserRole,
         company: p_role === "client" ? "Acme Corp" : "TechHouse", // Placeholder for company
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${p_name || email}`,
       };
       console.log("Login successful, returning user:", user);
       return NextResponse.json(user);

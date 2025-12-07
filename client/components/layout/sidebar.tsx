@@ -4,44 +4,58 @@ import { useAuth, type UserRole } from "@/lib/auth-context"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useState } from "react"
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  Briefcase, 
+  Calendar, 
+  LineChart, 
+  Settings, 
+  Zap, 
+  CheckSquare, 
+  ClipboardList, 
+  CreditCard, 
+  LogOut 
+} from "lucide-react"
 
-const menuItems: Record<UserRole, { label: string; icon: string; href: string }[]> = {
+const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: string }[]> = {
   admin: [
-    { label: "Dashboard", icon: "📊", href: "/dashboard/admin" },
-    { label: "Clients", icon: "👥", href: "/dashboard/admin/clients" },
-    { label: "Proposals", icon: "📄", href: "/dashboard/admin/proposals" },
-    { label: "Projects", icon: "💼", href: "/dashboard/admin/projects" },
-    { label: "Team", icon: "👫", href: "/dashboard/admin/team" },
-    { label: "Meetings", icon: "📅", href: "/dashboard/admin/meetings" },
-    { label: "Reports", icon: "📈", href: "/dashboard/admin/reports" },
-    { label: "Settings", icon: "⚙️", href: "/dashboard/admin/settings" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/admin" },
+    { label: "Clients", icon: <Users size={18} />, href: "/dashboard/admin/clients" },
+    { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/admin/proposals" },
+    { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/admin/projects" },
+    { label: "Team", icon: <Users size={18} />, href: "/dashboard/admin/team" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/admin/meetings" },
+    { label: "Reports", icon: <LineChart size={18} />, href: "/dashboard/admin/reports" },
+    { label: "Settings", icon: <Settings size={18} />, href: "/dashboard/admin/settings" },
   ],
   sales: [
-    { label: "Dashboard", icon: "📊", href: "/dashboard/sales" },
-    { label: "Leads", icon: "⚡", href: "/dashboard/sales/leads" },
-    { label: "Clients", icon: "👥", href: "/dashboard/sales/clients" },
-    { label: "Proposals", icon: "📄", href: "/dashboard/sales/proposals" },
-    { label: "Meetings", icon: "📅", href: "/dashboard/sales/meetings" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/sales" },
+    { label: "Leads", icon: <Zap size={18} />, href: "/dashboard/sales/leads" },
+    { label: "Clients", icon: <Users size={18} />, href: "/dashboard/sales/clients" },
+    { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/sales/proposals" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/sales/meetings" },
   ],
   pm: [
-    { label: "Dashboard", icon: "📊", href: "/dashboard/pm" },
-    { label: "Projects", icon: "💼", href: "/dashboard/pm/projects" },
-    { label: "Milestones", icon: "✓", href: "/dashboard/pm/milestones" },
-    { label: "Team", icon: "👥", href: "/dashboard/pm/team" },
-    { label: "Meetings", icon: "📅", href: "/dashboard/pm/meetings" },
-    { label: "Reports", icon: "📈", href: "/dashboard/pm/reports" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/pm" },
+    { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/pm/projects" },
+    { label: "Milestones", icon: <CheckSquare size={18} />, href: "/dashboard/pm/milestones" },
+    { label: "Team", icon: <Users size={18} />, href: "/dashboard/pm/team" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/pm/meetings" },
+    { label: "Reports", icon: <LineChart size={18} />, href: "/dashboard/pm/reports" },
   ],
   developer: [
-    { label: "Dashboard", icon: "📊", href: "/dashboard/developer" },
-    { label: "Tasks", icon: "📋", href: "/dashboard/developer/tasks" },
-    { label: "Milestones", icon: "✓", href: "/dashboard/developer/milestones" },
-    { label: "Meetings", icon: "📅", href: "/dashboard/developer/meetings" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/developer" },
+    { label: "Tasks", icon: <ClipboardList size={18} />, href: "/dashboard/developer/tasks" },
+    { label: "Milestones", icon: <CheckSquare size={18} />, href: "/dashboard/developer/milestones" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/developer/meetings" },
   ],
   client: [
-    { label: "Dashboard", icon: "📊", href: "/dashboard/client" },
-    { label: "Proposals", icon: "📄", href: "/dashboard/client/proposals" },
-    { label: "Projects", icon: "💼", href: "/dashboard/client/projects" },
-    { label: "Invoices", icon: "💳", href: "/dashboard/client/invoices" },
+    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/client" },
+    { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/client/proposals" },
+    { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/client/projects" },
+    { label: "Invoices", icon: <CreditCard size={18} />, href: "/dashboard/client/invoices" },
   ],
 }
 
@@ -58,10 +72,10 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-lg">CRM</div>
+          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center text-lg text-sidebar-primary-foreground font-bold">CRM</div>
           <div>
             <p className="font-bold text-sidebar-foreground text-sm">ProjectHub</p>
-            <p className="text-xs text-muted-foreground">{user.role}</p>
+            <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
           </div>
         </div>
       </div>
@@ -71,7 +85,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
         {items.map((item) => (
           <Link key={item.href} href={item.href}>
             <div className={`sidebar-nav-item ${currentPath === item.href ? "active" : ""}`}>
-              <span className="text-lg">{item.icon}</span>
+              {item.icon}
               <span>{item.label}</span>
             </div>
           </Link>
@@ -95,7 +109,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
               size="sm"
               className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/80"
             >
-              ⚙️
+              <Settings size={16} />
             </Button>
           </Link>
           <div className="relative flex-1">
@@ -105,7 +119,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
               onClick={() => setShowLogout(!showLogout)}
               className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/80"
             >
-              🚪
+              <LogOut size={16} />
             </Button>
             {showLogout && (
               <div className="absolute bottom-full right-0 mb-2 bg-card border border-border rounded-lg p-2 w-32 shadow-lg">
