@@ -61,7 +61,7 @@ export default function PMProjectsPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "active":
         return "bg-primary/20 text-primary";
       case "completed":
@@ -78,7 +78,7 @@ export default function PMProjectsPage() {
   };
 
   const getDisplayStatus = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "active":
         return "In Progress";
       case "completed":

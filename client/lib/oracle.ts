@@ -34,17 +34,39 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
 
     // Return outBinds if they exist and are not empty, otherwise return rows
     if (result.outBinds && Object.keys(result.outBinds).length > 0) {
+      const lowercasedOutBinds: Record<string, any> = {};
       for (const key of Object.keys(result.outBinds)) {
         const boundValue = result.outBinds[key];
         if (boundValue instanceof oracledb.ResultSet) {
           const resultSet = boundValue as oracledb.ResultSet<any>;
           const rows = await resultSet.getRows();
           await resultSet.close();
-          result.outBinds[key] = rows;
+          // Lowercase keys for each row in the result set
+          lowercasedOutBinds[key] = rows.map((row: any) => {
+            const newRow: any = {};
+            for (const rowKey in row) {
+              newRow[rowKey.toLowerCase()] = row[rowKey];
+            }
+            return newRow;
+          });
+        } else {
+           lowercasedOutBinds[key] = boundValue;
         }
       }
-      return result.outBinds;
+      return lowercasedOutBinds;
     }
+    
+    // Lowercase keys for direct rows result
+    if (result.rows) {
+        return (result.rows as any[]).map((row: any) => {
+            const newRow: any = {};
+            for (const rowKey in row) {
+                newRow[rowKey.toLowerCase()] = row[rowKey];
+            }
+            return newRow;
+        });
+    }
+
     return result.rows;
   } catch (err) {
     // Log the error and re-throw it

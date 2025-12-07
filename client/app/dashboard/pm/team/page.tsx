@@ -52,7 +52,6 @@ export default function PMTeamPage() {
   }, [isLoggedIn, user?.role, user?.id, router])
 
   if (!isLoggedIn || user?.role !== "pm") {
-    router.push("/")
     return null
   }
 
