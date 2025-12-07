@@ -20,6 +20,14 @@ export default function LoginPage() {
   const [resetEmail, setResetEmail] = useState("")
   const [resetSent, setResetSent] = useState(false)
 
+  // Registration State
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registerName, setRegisterName] = useState("")
+  const [registerCompany, setRegisterCompany] = useState("")
+  const [registerEmail, setRegisterEmail] = useState("")
+  const [registerPhone, setRegisterPhone] = useState("")
+  const [registerPassword, setRegisterPassword] = useState("")
+
   useEffect(() => {
     if (isLoggedIn && user) {
       const dashboardRoutes: Record<UserRole, string> = {
@@ -40,6 +48,39 @@ export default function LoginPage() {
       login(email, password, role)
       setLoading(false)
     }, 500)
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: registerName,
+          company: registerCompany,
+          email: registerEmail,
+          phone: registerPhone,
+          password: registerPassword,
+        }),
+      })
+
+      if (response.ok) {
+        alert("Account created successfully! Please sign in.")
+        setIsRegistering(false)
+        setEmail(registerEmail)
+        setPassword("")
+      } else {
+        const errorData = await response.json()
+        alert(`Registration failed: ${errorData.error}`)
+      }
+    } catch (err) {
+      console.error("Registration error:", err)
+      alert("An error occurred during registration.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleForgotPassword = (e: React.FormEvent) => {
@@ -96,9 +137,101 @@ export default function LoginPage() {
         <p className="text-xs text-muted-foreground">© 2025 ProjectHub. All rights reserved.</p>
       </div>
 
-      {/* Right Side - Login Form */}
+      {/* Right Side - Login/Register Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
-        {!showForgotPassword ? (
+        {isRegistering ? (
+          <Card className="w-full max-w-md border-border">
+            <CardContent className="pt-8">
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-2">Sign Up</h2>
+                <p className="text-muted-foreground">Create your client account</p>
+              </div>
+
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Full Name</label>
+                  <Input
+                    placeholder="John Doe"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    required
+                    className="bg-secondary border border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Company Name</label>
+                  <Input
+                    placeholder="Acme Inc."
+                    value={registerCompany}
+                    onChange={(e) => setRegisterCompany(e.target.value)}
+                    required
+                    className="bg-secondary border border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    required
+                    className="bg-secondary border border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Phone</label>
+                  <Input
+                    placeholder="+1 (555) 000-0000"
+                    value={registerPhone}
+                    onChange={(e) => setRegisterPhone(e.target.value)}
+                    className="bg-secondary border border-border text-foreground"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={registerPassword}
+                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      required
+                      className="bg-secondary border border-border text-foreground pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium mt-4"
+                >
+                  {loading ? "Creating Account..." : "Create Account"}
+                </Button>
+              </form>
+
+              <div className="mt-6 pt-6 border-t border-border text-center">
+                <p className="text-sm text-muted-foreground">
+                  Already have an account?{" "}
+                  <button
+                    onClick={() => setIsRegistering(false)}
+                    className="text-primary hover:underline"
+                  >
+                    Sign In
+                  </button>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : !showForgotPassword ? (
           <Card className="w-full max-w-md border-border">
             <CardContent className="pt-8">
               <div className="mb-8">
@@ -169,14 +302,23 @@ export default function LoginPage() {
               </form>
 
               {/* Forgot Password Link */}
-              <div className="mt-6 pt-6 border-t border-border">
+              <div className="mt-6 pt-6 border-t border-border space-y-4 text-center">
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
-                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors block w-full"
                 >
                   Forgot password?
                 </button>
+                <p className="text-sm text-muted-foreground">
+                  Don't have an account?{" "}
+                  <button
+                    onClick={() => setIsRegistering(true)}
+                    className="text-primary hover:underline"
+                  >
+                    Sign Up
+                  </button>
+                </p>
               </div>
             </CardContent>
           </Card>
