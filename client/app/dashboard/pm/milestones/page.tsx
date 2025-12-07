@@ -55,12 +55,11 @@ export default function MilestonesPage() {
   }, [isLoggedIn, user?.role, user?.id, router])
 
   if (!isLoggedIn || user?.role !== "pm") {
-    router.push("/")
     return null
   }
 
   const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "done":
         return "bg-chart-3/20 text-chart-3";
       case "in_progress":
@@ -73,7 +72,7 @@ export default function MilestonesPage() {
   };
 
   const getDisplayStatus = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "done":
         return "Completed";
       case "in_progress":
@@ -132,9 +131,9 @@ export default function MilestonesPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex gap-4 flex-1">
                         <div className="mt-1">
-                          {milestone.status.toLowerCase() === "done" ? (
+                          {milestone.status?.toLowerCase() === "done" ? (
                             <CheckCircle className="text-chart-3" size={24} />
-                          ) : milestone.status.toLowerCase() === "in_progress" ? (
+                          ) : milestone.status?.toLowerCase() === "in_progress" ? (
                             <Clock className="text-primary" size={24} />
                           ) : (
                             <AlertCircle className="text-muted-foreground" size={24} />
