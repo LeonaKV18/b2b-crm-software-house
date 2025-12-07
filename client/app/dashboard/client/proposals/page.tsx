@@ -4,8 +4,9 @@ import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { FileText, Download, CheckCircle, XCircle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { FileText, Download, CheckCircle, XCircle, Plus } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react" // Import useEffect
 
@@ -26,36 +27,71 @@ export default function ClientProposalsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Form State
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [newTitle, setNewTitle] = useState("")
+  const [newDescription, setNewDescription] = useState("")
+  const [newValue, setNewValue] = useState("")
+
+  const fetchProposals = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/client-proposals?userId=${user?.id}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setProposals(data)
+    } catch (err) {
+      console.error("Failed to fetch client proposals:", err)
+      setError("Failed to load proposals.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "client") {
       router.push("/")
       return
     }
-
-    const fetchProposals = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/client-proposals?userId=${user?.id}`)
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setProposals(data)
-      } catch (err) {
-        console.error("Failed to fetch client proposals:", err)
-        setError("Failed to load proposals.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (user?.id) { // Only fetch if user ID is available
+    if (user?.id) {
       fetchProposals()
     }
   }, [isLoggedIn, user?.role, user?.id, router])
 
   if (!isLoggedIn || user?.role !== "client") {
     return null
+  }
+
+  const handleCreateProposal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const response = await fetch("/api/client-proposals/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id,
+          title: newTitle,
+          description: newDescription,
+          value: newValue,
+        }),
+      })
+
+      if (response.ok) {
+        setShowCreateForm(false)
+        setNewTitle("")
+        setNewDescription("")
+        setNewValue("")
+        fetchProposals() // Refresh list
+      } else {
+        const errorData = await response.json()
+        alert(`Failed to create proposal: ${errorData.error}`)
+      }
+    } catch (err) {
+      console.error("Error creating proposal:", err)
+      alert("An error occurred while creating the proposal.")
+    }
   }
 
   const getStatusBadge = (status: string) => {
@@ -98,14 +134,79 @@ export default function ClientProposalsPage() {
       <div className="flex-1 overflow-auto">
         {/* Top Bar */}
         <div className="bg-card border-b border-border sticky top-0 z-10">
-          <div className="px-8 py-4">
-            <h1 className="text-2xl font-bold text-foreground">Proposals</h1>
-            <p className="text-sm text-muted-foreground">View and manage proposals</p>
+          <div className="px-8 py-4 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Proposals</h1>
+              <p className="text-sm text-muted-foreground">View and manage proposals</p>
+            </div>
+            <Button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Create Proposal
+            </Button>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="p-8">
+          {/* Create Proposal Form */}
+          {showCreateForm && (
+            <Card className="bg-card border border-border mb-8">
+              <CardHeader>
+                <CardTitle className="text-foreground">New Proposal</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleCreateProposal} className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Title</label>
+                    <Input
+                      placeholder="e.g. Mobile App Development"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Budget ($)</label>
+                    <Input
+                      type="number"
+                      placeholder="e.g. 15000"
+                      value={newValue}
+                      onChange={(e) => setNewValue(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
+                    <textarea
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      placeholder="Describe your project needs..."
+                      className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="bg-primary hover:bg-primary/90">
+                      Submit Proposal
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateForm(false)}
+                      className="bg-secondary border-border"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="space-y-4">
             {proposals.length === 0 ? (
               <p className="text-muted-foreground">No proposals found.</p>

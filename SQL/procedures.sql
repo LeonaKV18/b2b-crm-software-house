@@ -175,20 +175,33 @@ CREATE OR REPLACE PROCEDURE get_client_projects (
 AS
     v_client_id NUMBER;
 BEGIN
-    -- Get client_id for the given user_id
-    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    BEGIN
+        -- Get client_id for the given user_id
+        SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_client_id := NULL;
+    END;
 
-    OPEN p_projects_cursor FOR
-        SELECT
-            p.proposal_id AS id,
-            p.title AS name,
-            50 AS progress, -- Dummy data for now
-            p.status AS status,
-            TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS deadline
-        FROM
-            proposals p
-        WHERE
-            p.client_id = v_client_id;
+    IF v_client_id IS NOT NULL THEN
+        OPEN p_projects_cursor FOR
+            SELECT
+                p.proposal_id AS "id",
+                p.title AS "name",
+                50 AS "progress", -- Dummy data for now
+                p.status AS "status",
+                TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS "deadline"
+            FROM
+                proposals p
+            WHERE
+                p.client_id = v_client_id;
+    ELSE
+        -- Return empty result set if no client found
+        OPEN p_projects_cursor FOR
+            SELECT NULL AS "id", NULL AS "name", NULL AS "progress", NULL AS "status", NULL AS "deadline"
+            FROM dual
+            WHERE 1 = 0;
+    END IF;
 END;
 /
 
@@ -199,20 +212,33 @@ CREATE OR REPLACE PROCEDURE get_client_proposals (
 AS
     v_client_id NUMBER;
 BEGIN
-    -- Get client_id for the given user_id
-    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    BEGIN
+        -- Get client_id for the given user_id
+        SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_client_id := NULL;
+    END;
 
-    OPEN p_proposals_cursor FOR
-        SELECT
-            p.proposal_id AS "id",
-            p.title AS "title",
-            p.value AS "amount",
-            p.status AS "status",
-            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
-        FROM
-            proposals p
-        WHERE
-            p.client_id = v_client_id;
+    IF v_client_id IS NOT NULL THEN
+        OPEN p_proposals_cursor FOR
+            SELECT
+                p.proposal_id AS "id",
+                p.title AS "title",
+                p.value AS "amount",
+                p.status AS "status",
+                TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
+            FROM
+                proposals p
+            WHERE
+                p.client_id = v_client_id;
+    ELSE
+        -- Return empty result set if no client found
+        OPEN p_proposals_cursor FOR
+            SELECT NULL AS "id", NULL AS "title", NULL AS "amount", NULL AS "status", NULL AS "date"
+            FROM dual
+            WHERE 1 = 0;
+    END IF;
 END;
 /
 
@@ -248,22 +274,35 @@ CREATE OR REPLACE PROCEDURE get_client_invoices (
 AS
     v_client_id NUMBER;
 BEGIN
-    -- Get client_id for the given user_id
-    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    BEGIN
+        -- Get client_id for the given user_id
+        SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_client_id := NULL;
+    END;
 
-    OPEN p_invoices_cursor FOR
-        SELECT
-            i.invoice_id AS id,
-            NVL(p.title, 'N/A') AS project, -- Use NVL for cases where proposal_id might be null
-            i.amount AS amount,
-            TO_CHAR(i.issue_date, 'YYYY-MM-DD') AS date,
-            i.status AS status
-        FROM
-            invoices i
-        LEFT JOIN
-            proposals p ON i.proposal_id = p.proposal_id
-        WHERE
-            i.client_id = v_client_id;
+    IF v_client_id IS NOT NULL THEN
+        OPEN p_invoices_cursor FOR
+            SELECT
+                i.invoice_id AS "id",
+                NVL(p.title, 'N/A') AS "project", -- Use NVL for cases where proposal_id might be null
+                i.amount AS "amount",
+                TO_CHAR(i.issue_date, 'YYYY-MM-DD') AS "date",
+                i.status AS "status"
+            FROM
+                invoices i
+            LEFT JOIN
+                proposals p ON i.proposal_id = p.proposal_id
+            WHERE
+                i.client_id = v_client_id;
+    ELSE
+        -- Return empty result set if no client found
+        OPEN p_invoices_cursor FOR
+            SELECT NULL AS "id", NULL AS "project", NULL AS "amount", NULL AS "date", NULL AS "status"
+            FROM dual
+            WHERE 1 = 0;
+    END IF;
 END;
 /
 
