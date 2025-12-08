@@ -17,7 +17,6 @@ export default function SettingsPage() {
   const adminLink = "/dashboard/admin/settings"
   const roleLinks = {
     admin: adminLink,
-    sales: "/dashboard/sales",
     pm: "/dashboard/pm",
     developer: "/dashboard/developer",
     client: "/dashboard/client",

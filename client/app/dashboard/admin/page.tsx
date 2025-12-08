@@ -230,11 +230,7 @@ export default function AdminDashboard() {
                   View Reports
                 </Button>
               </Link>
-              <Link href="/dashboard/sales">
-                <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
-                  Sales Dashboard
-                </Button>
-              </Link>
+
               <Link href="/">
                 <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
                   Back to Login

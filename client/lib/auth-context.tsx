@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState } from "react"
 
-export type UserRole = "admin" | "sales" | "pm" | "developer" | "client"
+export type UserRole = "admin" | "pm" | "developer" | "client"
 
 interface User {
   id: string

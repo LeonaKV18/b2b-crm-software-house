@@ -28,7 +28,6 @@ export default function LoginPage() {
     if (isLoggedIn && user) {
       const dashboardRoutes: Record<UserRole, string> = {
         admin: "/dashboard/admin",
-        sales: "/dashboard/sales",
         pm: "/dashboard/pm",
         developer: "/dashboard/developer",
         client: "/dashboard/client",

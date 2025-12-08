@@ -499,154 +499,19 @@ BEGIN
             proposals p ON t.proposal_id = p.proposal_id
         WHERE
             p.pm_user_id = p_user_id
-            AND u.role IN ('developer', 'admin', 'pm', 'sales', 'client'); -- Include relevant roles, assuming 'developer' covers the team roles
+            AND u.role IN ('developer', 'admin', 'pm', 'client'); -- Include relevant roles, assuming 'developer' covers the team roles
 END;
 /
 
-CREATE OR REPLACE PROCEDURE get_sales_dashboard_stats (
-    p_user_id IN NUMBER,
-    p_total_leads OUT NUMBER,
-    p_total_clients OUT NUMBER,
-    p_total_proposals OUT NUMBER,
-    p_conversion_rate OUT NUMBER
-)
-AS
-    v_closed_won_leads NUMBER;
-BEGIN
-    -- Total Leads
-    SELECT COUNT(*)
-    INTO p_total_leads
-    FROM leads
-    WHERE sales_user_id = p_user_id;
 
-    -- Total Clients (count distinct clients from approved/completed proposals by this sales user)
-    SELECT COUNT(DISTINCT c.client_id)
-    INTO p_total_clients
-    FROM clients c
-    JOIN proposals p ON c.client_id = p.client_id
-    WHERE p.pm_user_id = p_user_id -- Assuming sales user is also the PM for their proposals
-    AND p.status IN ('approved', 'completed');
 
-    -- Total Proposals (by this sales user)
-    SELECT COUNT(*)
-    INTO p_total_proposals
-    FROM proposals
-    WHERE pm_user_id = p_user_id;
 
-    -- Closed Won Leads
-    SELECT COUNT(*)
-    INTO v_closed_won_leads
-    FROM leads
-    WHERE sales_user_id = p_user_id
-    AND status = 'closed_won';
 
-    -- Conversion Rate
-    IF p_total_leads > 0 THEN
-        p_conversion_rate := ROUND((v_closed_won_leads / p_total_leads) * 100, 2);
-    ELSE
-        p_conversion_rate := 0;
-    END IF;
 
-EXCEPTION
-    WHEN NO_DATA_FOUND THEN
-        p_total_leads := 0;
-        p_total_clients := 0;
-        p_total_proposals := 0;
-        p_conversion_rate := 0;
-    WHEN OTHERS THEN
-        RAISE;
-END;
-/
 
-CREATE OR REPLACE PROCEDURE get_sales_leads (
-    p_user_id IN NUMBER,
-    p_leads_cursor OUT SYS_REFCURSOR
-)
-AS
-BEGIN
-    OPEN p_leads_cursor FOR
-        SELECT
-            lead_id AS id,
-            company_name AS company,
-            contact_person AS contact,
-            email,
-            phone,
-            status,
-            estimated_value AS value,
-            source
-        FROM
-            leads
-        WHERE
-            sales_user_id = p_user_id;
-END;
-/
 
-CREATE OR REPLACE PROCEDURE get_sales_clients (
-    p_user_id IN NUMBER,
-    p_clients_cursor OUT SYS_REFCURSOR
-)
-AS
-BEGIN
-    OPEN p_clients_cursor FOR
-        SELECT DISTINCT
-            c.client_id AS id,
-            c.company_name AS name,
-            (SELECT COUNT(p.proposal_id) FROM proposals p WHERE p.client_id = c.client_id AND p.pm_user_id = p_user_id) AS projects,
-            CASE
-                WHEN EXISTS (SELECT 1 FROM proposals WHERE client_id = c.client_id AND pm_user_id = p_user_id AND status IN ('active', 'approved')) THEN 'Active'
-                ELSE 'Inactive'
-            END AS status
-        FROM
-            clients c
-        JOIN
-            proposals p_join ON c.client_id = p_join.client_id
-        WHERE
-            p_join.pm_user_id = p_user_id; -- Clients whose proposals are managed by this sales user (acting as PM)
-END;
-/
 
-CREATE OR REPLACE PROCEDURE get_sales_proposals (
-    p_user_id IN NUMBER,
-    p_proposals_cursor OUT SYS_REFCURSOR
-)
-AS
-BEGIN
-    OPEN p_proposals_cursor FOR
-        SELECT
-            p.proposal_id AS id,
-            p.title AS title,
-            c.company_name AS client,
-            p.value AS value,
-            p.status AS status
-        FROM
-            proposals p
-        JOIN
-            clients c ON p.client_id = c.client_id
-        WHERE
-            p.pm_user_id = p_user_id;
-END;
-/
 
-CREATE OR REPLACE PROCEDURE get_sales_meetings (
-    p_user_id IN NUMBER,
-    p_meetings_cursor OUT SYS_REFCURSOR
-)
-AS
-BEGIN
-    OPEN p_meetings_cursor FOR
-        SELECT
-            m.meeting_id AS "id",
-            m.subject AS "title",
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time"
-        FROM
-            meetings m
-        JOIN
-            proposals p ON m.proposal_id = p.proposal_id
-        WHERE
-            p.pm_user_id = p_user_id;
-END;
-/
 
 CREATE OR REPLACE PROCEDURE get_admin_dashboard_stats (
     p_total_clients OUT NUMBER,
@@ -776,7 +641,7 @@ CREATE OR REPLACE PROCEDURE get_admin_conversion_data (
 )
 AS
 BEGIN
-    SELECT COUNT(*) INTO p_leads_count FROM leads;
+    p_leads_count := 0; -- Leads table removed
     SELECT COUNT(*) INTO p_proposals_count FROM proposals;
     SELECT COUNT(*) INTO p_approved_count FROM proposals WHERE status = 'approved';
 END;
@@ -819,8 +684,6 @@ CREATE OR REPLACE PROCEDURE get_admin_summary_metrics (
     p_team_utilization OUT NUMBER
 )
 AS
-    v_total_leads NUMBER;
-    v_closed_won_leads NUMBER;
 BEGIN
     -- Total Revenue
     SELECT NVL(SUM(value), 0) INTO p_total_revenue FROM proposals WHERE status = 'completed';
@@ -828,14 +691,8 @@ BEGIN
     -- Active Clients (count all clients)
     SELECT COUNT(*) INTO p_active_clients FROM clients;
 
-    -- Conversion Rate (from leads table)
-    SELECT COUNT(*) INTO v_total_leads FROM leads;
-    SELECT COUNT(*) INTO v_closed_won_leads FROM leads WHERE status = 'closed_won';
-    IF v_total_leads > 0 THEN
-        p_conversion_rate := ROUND((v_closed_won_leads / v_total_leads) * 100, 2);
-    ELSE
-        p_conversion_rate := 0;
-    END IF;
+    -- Conversion Rate (Leads table removed)
+    p_conversion_rate := 0;
 
     -- Team Utilization (Average of allocation_percentage from all team_members)
     SELECT NVL(AVG(allocation_percentage), 0) INTO p_team_utilization FROM team_members;

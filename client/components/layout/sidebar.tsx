@@ -30,13 +30,6 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
     { label: "Reports", icon: <LineChart size={18} />, href: "/dashboard/admin/reports" },
     { label: "Settings", icon: <Settings size={18} />, href: "/dashboard/admin/settings" },
   ],
-  sales: [
-    { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/sales" },
-    { label: "Leads", icon: <Zap size={18} />, href: "/dashboard/sales/leads" },
-    { label: "Clients", icon: <Users size={18} />, href: "/dashboard/sales/clients" },
-    { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/sales/proposals" },
-    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/sales/meetings" },
-  ],
   pm: [
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/pm" },
     { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/pm/projects" },

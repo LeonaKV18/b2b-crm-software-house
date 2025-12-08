@@ -27,6 +27,7 @@ You are assisting with a B2B CRM project. Your job is to fix frontend issues one
 - Respect current folder structure.
 - Keep all code clean, readable, and modular.
 - If a component is missing data, check `/api/*` routes first.
+- donot commit anything to github the user will verify manually then commit
 
 ## Task Process for Each Fix
 
@@ -45,3 +46,5 @@ You are assisting with a B2B CRM project. Your job is to fix frontend issues one
 ```diff
 - onClick={() => {}}
 + onClick={handleAddClient}
+
+
