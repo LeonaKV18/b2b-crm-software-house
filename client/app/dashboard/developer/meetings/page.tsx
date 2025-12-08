@@ -79,7 +79,6 @@ export default function MeetingsPage() {
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-bold text-foreground">{meeting.title}</h3>
-                    <span className="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground">{meeting.type}</span>
                   </div>
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1"><Calendar size={14} /> {meeting.date}</div>
