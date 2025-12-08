@@ -123,7 +123,7 @@ export default function PMProjectsPage() {
               <h1 className="text-2xl font-bold text-foreground">My Projects</h1>
               <p className="text-sm text-muted-foreground">All assigned projects</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90">+ New Project</Button>
+            
           </div>
         </div>
 
