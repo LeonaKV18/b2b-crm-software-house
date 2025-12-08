@@ -86,9 +86,7 @@ export default function PMDashboard() {
               <h1 className="text-2xl font-bold text-foreground">Project Management Dashboard</h1>
               <p className="text-sm text-muted-foreground">Track all projects and milestones</p>
             </div>
-            <Link href="/dashboard/pm/projects">
-              <Button className="bg-primary hover:bg-primary/90">+ New Project</Button>
-            </Link>
+            
           </div>
         </div>
 
