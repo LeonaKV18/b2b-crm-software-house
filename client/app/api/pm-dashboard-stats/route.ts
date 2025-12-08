@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       p_completed_projects_count: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       p_milestones_on_time: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
       p_milestones_delayed: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      p_dev_utilization_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
     };
 
     const result = await executeQuery<{
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest) {
       p_completed_projects_count: number;
       p_milestones_on_time: number;
       p_milestones_delayed: number;
-    }>(`BEGIN get_pm_dashboard_stats(:p_user_id, :p_active_projects_count, :p_delayed_projects_count, :p_on_schedule_projects_count, :p_team_utilization, :p_completed_projects_count, :p_milestones_on_time, :p_milestones_delayed); END;`, bindVars);
+      p_dev_utilization_cursor: { id: number; name: string; utilization: number }[];
+    }>(`BEGIN get_pm_dashboard_stats(:p_user_id, :p_active_projects_count, :p_delayed_projects_count, :p_on_schedule_projects_count, :p_team_utilization, :p_completed_projects_count, :p_milestones_on_time, :p_milestones_delayed, :p_dev_utilization_cursor); END;`, bindVars);
 
     if (result) {
       return NextResponse.json({
@@ -40,7 +42,8 @@ export async function GET(req: NextRequest) {
         teamUtilization: result.p_team_utilization,
         completedProjectsCount: result.p_completed_projects_count,
         milestonesOnTime: result.p_milestones_on_time,
-        milestonesDelayed: result.p_milestones_delayed
+        milestonesDelayed: result.p_milestones_delayed,
+        developerUtilizations: result.p_dev_utilization_cursor || []
       });
     } else {
       return NextResponse.json({ error: "Failed to fetch PM dashboard stats" }, { status: 500 });

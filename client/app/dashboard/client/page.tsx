@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { FileText, Briefcase, CheckCircle, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react" // Import useEffect
+import { UpcomingMeetingsWidget } from "@/components/dashboard/upcoming-meetings-widget"
 
 interface ClientStats {
   proposalsCount: number;
@@ -145,6 +146,11 @@ export default function ClientDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 h-64">
+            <UpcomingMeetingsWidget userId={user?.id || 0} role="client" />
           </div>
 
           {/* Quick Navigation */}

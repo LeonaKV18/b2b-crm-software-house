@@ -92,7 +92,8 @@ export default function DeveloperProjectsPage() {
               <p className="text-muted-foreground">No projects found.</p>
             ) : (
               projects.map((project) => (
-                <Card key={project.id} className="bg-card border border-border">
+                <Link href={`/dashboard/developer/projects/${project.id}`} key={project.id} className="block">
+                <Card className="bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -121,6 +122,7 @@ export default function DeveloperProjectsPage() {
                     </div>
                   </CardContent>
                 </Card>
+                </Link>
               ))
             )}
           </div>

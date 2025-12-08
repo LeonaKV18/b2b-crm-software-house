@@ -16,6 +16,7 @@ interface PMStats {
   completedProjectsCount: number;
   milestonesOnTime: number;
   milestonesDelayed: number;
+  developerUtilizations: { id: number; name: string; utilization: number }[];
 }
 
 export default function PMReportsPage() {
@@ -160,7 +161,7 @@ export default function PMReportsPage() {
           {/* Performance Metrics Section */}
           <div>
             <h2 className="text-lg font-semibold mb-4">Team & Milestone Performance</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 {performanceStats.map((stat, idx) => (
                     <Card key={idx} className="bg-card border border-border">
                         <CardContent className="pt-6">
@@ -174,13 +175,31 @@ export default function PMReportsPage() {
                     </Card>
                 ))}
             </div>
-          </div>
 
-          <Link href="/dashboard/pm">
-            <Button variant="outline" className="bg-secondary border-border mt-4">
-              ← Back to Dashboard
-            </Button>
-          </Link>
+            {stats?.developerUtilizations && stats.developerUtilizations.length > 0 && (
+                <div>
+                    <h2 className="text-lg font-semibold mb-4">Developer Utilization</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {stats.developerUtilizations.map(dev => (
+                            <Card key={dev.id} className="bg-card border border-border">
+                                <CardContent className="pt-6">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-sm font-medium text-foreground">{dev.name}</p>
+                                        <Users className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <p className="text-2xl font-bold text-foreground">{dev.utilization}%</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Projects assigned / 3</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <Link href="/dashboard/pm">
+              <Button variant="outline" className="bg-secondary border-border mt-4">
+                ← Back to Dashboard
+
         </div>
       </div>
     </div>

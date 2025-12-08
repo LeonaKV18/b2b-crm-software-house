@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Briefcase, AlertCircle, Clock, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
+import { UpcomingMeetingsWidget } from "@/components/dashboard/upcoming-meetings-widget"
+import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget"
 
 interface PMStats {
   activeProjectsCount: number;
@@ -149,6 +151,12 @@ export default function PMDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 h-64">
+            <UpcomingMeetingsWidget userId={user?.id || 0} role="pm" />
+            <UpcomingDeadlinesWidget userId={user?.id || 0} role="pm" />
           </div>
 
           {/* Quick Navigation */}

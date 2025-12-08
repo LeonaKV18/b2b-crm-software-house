@@ -200,6 +200,26 @@ export default function PMProjectDetailsPage({ params }: { params: Promise<{ id:
     }
   }
 
+  const handleCompleteProject = async () => {
+    if (!confirm("Are you sure you want to complete this project? This will generate an invoice for the client.")) return;
+
+    try {
+        const res = await fetch(`/api/projects/${projectId}/complete`, {
+            method: "POST",
+        });
+
+        if (res.ok) {
+            alert("Project completed successfully!");
+            fetchProjectData(projectId); // Refresh to show updated status
+        } else {
+            alert("Failed to complete project.");
+        }
+    } catch (err) {
+        console.error("Error completing project:", err);
+        alert("Error completing project.");
+    }
+  }
+
   if (!isLoggedIn || user?.role !== "pm") {
     return null
   }
@@ -268,6 +288,13 @@ export default function PMProjectDetailsPage({ params }: { params: Promise<{ id:
               <p className="text-sm text-muted-foreground">{project.client}</p>
             </div>
             <div className="flex gap-2">
+                <Button 
+                    variant="default" 
+                    className="bg-chart-3 hover:bg-chart-3/90"
+                    onClick={handleCompleteProject}
+                >
+                    Complete Project
+                </Button>
                 <Link href="/dashboard/pm/projects">
                     <Button variant="outline" className="bg-secondary border-border">
                         ← Back to Projects

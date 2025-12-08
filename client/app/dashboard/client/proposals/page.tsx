@@ -7,16 +7,22 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { FileText, Download, CheckCircle, XCircle, Plus } from "lucide-react"
+import { FileText, Download, CheckCircle, XCircle, Plus, Edit } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react" // Import useEffect
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 interface Proposal {
   id: number;
   title: string;
-  amount: number; // Amount is now a number from the database
+  amount: number;
   status: string;
   date: string;
+  description: string;
+  expected_close: string;
+  functional_requirements: string;
+  non_functional_requirements: string;
+  client_comments: string;
 }
 
 export default function ClientProposalsPage() {
@@ -28,7 +34,7 @@ export default function ClientProposalsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Form State
+  // Create Form State
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [newDescription, setNewDescription] = useState("")
@@ -37,6 +43,14 @@ export default function ClientProposalsPage() {
   const [newFunctionalReq, setNewFunctionalReq] = useState("")
   const [newNonFunctionalReq, setNewNonFunctionalReq] = useState("")
   const [newComments, setNewComments] = useState("")
+
+  // Edit Form State
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [editingProposal, setEditingProposal] = useState<Proposal | null>(null)
+  const [editTitle, setEditTitle] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editValue, setEditValue] = useState("")
+  const [editExpectedClose, setEditExpectedClose] = useState("")
 
   const fetchProposals = async () => {
     try {
@@ -65,10 +79,6 @@ export default function ClientProposalsPage() {
     }
   }, [isLoggedIn, user?.role, user?.id, router])
 
-  if (!isLoggedIn || user?.role !== "client") {
-    return null
-  }
-
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -96,7 +106,7 @@ export default function ClientProposalsPage() {
         setNewFunctionalReq("")
         setNewNonFunctionalReq("")
         setNewComments("")
-        fetchProposals() // Refresh list
+        fetchProposals()
       } else {
         const errorData = await response.json()
         alert(`Failed to create proposal: ${errorData.error}`)
@@ -107,16 +117,52 @@ export default function ClientProposalsPage() {
     }
   }
 
+  const openEditDialog = (proposal: Proposal) => {
+    setEditingProposal(proposal)
+    setEditTitle(proposal.title)
+    setEditDescription(proposal.description || "")
+    setEditValue(proposal.amount.toString())
+    // Format date for input type="date" if needed, assuming YYYY-MM-DD from API
+    setEditExpectedClose(proposal.expected_close || "") 
+    setShowEditDialog(true)
+  }
+
+  const handleReworkProposal = async () => {
+    if (!editingProposal) return
+
+    try {
+        const res = await fetch(`/api/client-proposals/${editingProposal.id}/rework`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                title: editTitle,
+                description: editDescription,
+                value: editValue,
+                expectedClose: editExpectedClose
+            })
+        })
+
+        if (res.ok) {
+            setShowEditDialog(false)
+            fetchProposals()
+        } else {
+            alert("Failed to update proposal")
+        }
+    } catch (err) {
+        console.error("Error updating proposal:", err)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusStyles: Record<string, string> = {
       "approved": "bg-chart-3/20 text-chart-3",
-      "submitted": "bg-primary/20 text-primary", // Mapping 'submitted' to 'Under Review' style
+      "submitted": "bg-primary/20 text-primary",
       "rejected": "bg-destructive/20 text-destructive",
       "draft": "bg-muted text-muted-foreground",
       "active": "bg-primary/20 text-primary",
       "completed": "bg-chart-3/20 text-chart-3",
     }
-    return statusStyles[status.toLowerCase()] || "bg-muted text-muted-foreground" // Default style
+    return statusStyles[status.toLowerCase()] || "bg-muted text-muted-foreground"
   }
 
   const getDisplayStatus = (status: string) => {
@@ -294,21 +340,17 @@ export default function ClientProposalsPage() {
                         >
                           {getDisplayStatus(proposal.status)}
                         </span>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" className="bg-secondary border-border">
-                            <Download size={16} />
-                          </Button>
-                          {/* Conditional buttons for 'Under Review' status from the database equivalent */}
-                          {proposal.status.toLowerCase() === "submitted" && (
-                            <>
-                              <Button size="sm" className="bg-chart-3 hover:bg-chart-3/90 flex items-center gap-1">
-                                <CheckCircle size={16} />
-                                Approve
+                        <div className="flex gap-2 justify-end">
+                          {/* Show Edit button only if rejected */}
+                          {proposal.status.toLowerCase() === 'rejected' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="bg-secondary border-border"
+                                onClick={() => openEditDialog(proposal)}
+                              >
+                                <Edit size={16} className="mr-1"/> Edit & Resubmit
                               </Button>
-                              <Button size="sm" variant="destructive">
-                                <XCircle size={16} />
-                              </Button>
-                            </>
                           )}
                         </div>
                       </div>
@@ -325,6 +367,39 @@ export default function ClientProposalsPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Edit Proposal</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div>
+                        <label className="text-sm font-medium block mb-1">Title</label>
+                        <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-medium block mb-1">Value ($)</label>
+                            <Input type="number" value={editValue} onChange={(e) => setEditValue(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium block mb-1">Expected Close</label>
+                            <Input type="date" value={editExpectedClose} onChange={(e) => setEditExpectedClose(e.target.value)} />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium block mb-1">Description</label>
+                        <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="h-32" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowEditDialog(false)}>Cancel</Button>
+                    <Button onClick={handleReworkProposal}>Resubmit</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

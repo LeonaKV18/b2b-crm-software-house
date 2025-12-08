@@ -146,6 +146,29 @@ export default function MilestonesPage() {
     }
   }
 
+  const handleStatusChange = async (taskId: number, newStatus: string) => {
+    try {
+        const res = await fetch(`/api/tasks/${taskId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (res.ok) {
+            // Update local state
+            setSubtasks(subtasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+            // Optionally refresh milestones if needed to update counts
+            if (newStatus === 'done' || newStatus === 'todo') {
+                fetchMilestones(); 
+            }
+        } else {
+            alert("Failed to update status");
+        }
+    } catch (err) {
+        console.error("Error updating status:", err);
+    }
+  }
+
   if (!isLoggedIn || user?.role !== "pm") {
     return null
   }
@@ -252,7 +275,19 @@ export default function MilestonesPage() {
                                             <div key={task.id} className="flex justify-between items-center p-2 bg-secondary/50 rounded text-sm">
                                                 <span className="font-medium">{task.title}</span>
                                                 <div className="flex items-center gap-4">
-                                                    <span className={`px-2 py-0.5 rounded text-[10px] ${getStatusBadge(task.status)}`}>{getDisplayStatus(task.status)}</span>
+                                                    <Select 
+                                                        value={task.status} 
+                                                        onValueChange={(val) => handleStatusChange(task.id, val)}
+                                                    >
+                                                        <SelectTrigger className="h-7 w-[110px] text-xs">
+                                                            <SelectValue placeholder="Status" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="todo">Todo</SelectItem>
+                                                            <SelectItem value="in_progress">In Progress</SelectItem>
+                                                            <SelectItem value="done">Done</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                     <span className="text-xs text-muted-foreground">{task.duedate}</span>
                                                 </div>
                                             </div>

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns" // For date comparison
+import { UpcomingMeetingsWidget } from "@/components/dashboard/upcoming-meetings-widget"
+import { UpcomingDeadlinesWidget } from "@/components/dashboard/upcoming-deadlines-widget"
 
 interface Task {
   id: number;
@@ -209,6 +211,12 @@ export default function DeveloperDashboard() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 h-64">
+            <UpcomingMeetingsWidget userId={user?.id || 0} role="developer" />
+            <UpcomingDeadlinesWidget userId={user?.id || 0} role="developer" />
           </div>
 
           {/* Tasks List */}

@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
+import { UpcomingMeetingsWidget } from "@/components/dashboard/upcoming-meetings-widget"
 
 interface AdminStats {
   totalClients: number;
@@ -172,27 +173,9 @@ export default function AdminDashboard() {
               </Card>
             </div>
 
-            {/* Upcoming Meetings Placeholder */}
+            {/* Upcoming Meetings */}
             <div>
-              <Card className="bg-card border border-border">
-                <CardHeader>
-                  <CardTitle className="text-foreground flex items-center gap-2">
-                    <Clock className="text-muted-foreground" size={24} />
-                    Upcoming
-                  </CardTitle>
-                  <CardDescription>Next 7 days</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <p className="text-muted-foreground">Meeting data is fetched on the Meetings page.</p>
-                  </div>
-                  <Link href="/dashboard/admin/meetings">
-                    <Button variant="ghost" className="w-full mt-4 text-primary hover:bg-primary/10">
-                      Schedule meeting →
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+              <UpcomingMeetingsWidget userId={user?.id || 0} role="admin" />
             </div>
           </div>
 

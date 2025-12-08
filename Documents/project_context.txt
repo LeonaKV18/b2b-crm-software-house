@@ -1,0 +1,54 @@
+
+flow:
+
+- clients comes in fills in a proposal description , function , non functional etc , value and the date he want it delivered by
+- admin reviews , if wants to accept he assign a pm then clicks accept, optional comment
+- admin can decline if so he gives a comment and  client can rework his proposal
+- client can rework his proposal and admin can see it again
+- now pm has it showing up in his project tab , he creates milestone and breaks the milestone into subtasks
+- developer can see those project wise milestones and task he can mark tasks as done
+- pm may mark a task as undone with comments
+- pm now can mark a milestone as completed hence team moves to new milestone 
+- pm marks project as completed
+- client pays invoice
+
+
+
+
+business roles:
+- one user can only have one role admin , client ,pm and developer
+- project manager cannot be assigned to more than 5 projects
+- developers cannot work on more than 3 project 
+- utilization calculated as assigned/total assignable for both pm and developers
+- pm should see utilization score of developers as total and individual in reports
+- clients are added through sign up
+- client set to inactive after last  proposal/completed project is 6 month old through which a admin can message them
+- admin can add pm and developers
+- admin can only schedule meeting with pm and client
+- pm can only schedule meeting client and developer i.e that are working on his project
+- no teams developers are a pool and pm can assign them as he pleases provided they don't go above utilization score
+- only difference between proposal/project is it has flag =0 latter has flag =1 approved proposal become projects
+- once approved admin can only view progress of projects
+- once approved pm can add  milestones / developers as he wants
+- admin can set pm and developer as active or inactive , if pm and developer inactive they cannot be assigned or utilized
+- admin has overall report
+- pm just has report like utilization , on time stuff etc
+- all users should have upcoming meetings widget
+- pm and developers should have upcoming deadline widgets
+- developers can lock in task in milestones
+- developers can only marked locked in task as done
+- no dead locks on task
+- all meetings have minutes of meeting 
+- minutes of meeting can be viewed later on
+- pdf generation of reports and minutes of meeting
+
+chore:
+- make themes and colours consistent / professional across all users , maybe read from one theme file
+- make db 3nf
+- remove dead code
+- all sql code should be in sql folder and divided into procedure.sql , trigger.sql and data.sql and table.sql
+- code shouldn't break if I insert data from back end so apply necessary constraints and triggers
+
+
+verification:
+run npm run build to check errors
