@@ -52,3 +52,63 @@ This repository contains:
   - Design and implement a fully functional B2B CRM system with end-to-end relational database integration, demonstrating normalization and data integrity in a real-world OLTP scenario.  
   - Implement role-based dashboards, access control, and automated business workflows using triggers and stored procedures. 
   - Provide a scalable, maintainable, and user-friendly web application using **Node.js** and **React.js** integrated with **Oracle RDBMS**.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher recommended)
+- Oracle Database (Locally installed or accessible)
+- SQL Developer (Optional, for database management)
+
+### Database Setup
+
+1.  Open your terminal or command prompt.
+2.  Connect to SQLPlus as SYSDBA:
+    ```bash
+    sqlplus / as sysdba
+    ```
+3.  Execute the following commands to create the user and grant permissions:
+    ```sql
+    ALTER SESSION SET CONTAINER = ORCLPDB;
+    SHOW CON_NAME;
+    CREATE USER project IDENTIFIED BY dbo;
+    GRANT UNLIMITED TABLESPACE TO project;
+    GRANT CONNECT, RESOURCE, DBA TO project;
+    ```
+
+### SQL Developer Connection
+
+When setting up a connection in Oracle SQL Developer, use the following details:
+
+- **Username:** project
+- **Password:** dbo
+- **Hostname:** localhost (or your server IP)
+- **Port:** 1521
+- **Service Name:** ORCLPDB
+
+### Application Setup
+
+1.  Navigate to the `client` directory:
+    ```bash
+    cd client
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Set up environment variables:
+    - Create a `.env.local` file in the `client` directory (if it doesn't exist).
+    - Ensure it contains the following credentials:
+      ```env
+      ORACLE_USER=project
+      ORACLE_PASSWORD=dbo
+      ORACLE_CONNECTION_STRING=localhost:1521/ORCLPDB
+      ```
+4.  Run the development server:
+    ```bash
+    npm run dev
+    ```
+5.  Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
