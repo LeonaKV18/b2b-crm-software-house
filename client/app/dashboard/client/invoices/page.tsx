@@ -1,23 +1,23 @@
-
 "use client"
-import { useState, useEffect } from "react" // Import useEffect
+
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, Eye } from "lucide-react"
+import { FileText, DollarSign, CheckCircle, Clock } from "lucide-react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 
 interface Invoice {
-  id: string;
+  id: number;
   project: string;
-  amount: number; // Amount is now a number from the database
+  amount: number;
   date: string;
   status: string;
 }
 
-export default function InvoicesPage() {
+export default function ClientInvoicesPage() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/client/invoices")
@@ -26,46 +26,65 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/client-invoices?userId=${user?.id}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setInvoices(data)
+    } catch (err) {
+      console.error("Failed to fetch client invoices:", err)
+      setError("Failed to load invoices.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "client") {
       router.push("/")
       return
     }
-
-    const fetchInvoices = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/client-invoices?userId=${user?.id}`)
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setInvoices(data)
-      } catch (err) {
-        console.error("Failed to fetch client invoices:", err)
-        setError("Failed to load invoices.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (user?.id) { // Only fetch if user ID is available
+    if (user?.id) {
       fetchInvoices()
     }
   }, [isLoggedIn, user?.role, user?.id, router])
+
+  const handleMarkPaid = async (invoiceId: number) => {
+    if (!confirm("Are you sure you want to mark this invoice as paid?")) return;
+
+    try {
+      const res = await fetch(`/api/invoices/${invoiceId}/pay`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (res.ok) {
+        alert("Invoice marked as paid.");
+        fetchInvoices(); // Refresh list
+      } else {
+        alert("Failed to mark invoice as paid.");
+      }
+    } catch (err) {
+      console.error("Error marking invoice paid:", err);
+      alert("Error marking invoice paid.");
+    }
+  }
 
   if (!isLoggedIn || user?.role !== "client") {
     return null
   }
 
   const getStatusBadge = (status: string) => {
-    const statusStyles: Record<string, string> = {
-      "paid": "bg-chart-3/20 text-chart-3",
-      "pending": "bg-primary/20 text-primary",
-      "overdue": "bg-destructive/20 text-destructive",
-      "cancelled": "bg-muted text-muted-foreground",
+    switch (status.toLowerCase()) {
+      case "paid": return "bg-chart-3/20 text-chart-3";
+      case "pending": return "bg-primary/20 text-primary";
+      case "overdue": return "bg-destructive/20 text-destructive";
+      default: return "bg-muted text-muted-foreground";
     }
-    return statusStyles[status.toLowerCase()] || "bg-muted text-muted-foreground" // Default style
   }
 
   if (loading) {
@@ -93,65 +112,56 @@ export default function InvoicesPage() {
         <div className="bg-card border-b border-border sticky top-0 z-10">
           <div className="px-8 py-4">
             <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
-            <p className="text-sm text-muted-foreground">View and download invoices</p>
+            <p className="text-sm text-muted-foreground">Manage your project invoices</p>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="p-8">
-          <Card className="bg-card border border-border">
-            <CardContent className="pt-6">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b border-border">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Invoice ID</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Project</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Amount</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoices.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-3 px-4 text-center text-muted-foreground">No invoices found.</td>
-                      </tr>
-                    ) : (
-                      invoices.map((invoice) => (
-                        <tr key={invoice.id} className="border-b border-border hover:bg-secondary/50 transition-colors">
-                          <td className="py-3 px-4 font-mono text-sm text-foreground">{invoice.id}</td>
-                          <td className="py-3 px-4 text-sm text-foreground">{invoice.project}</td>
-                          <td className="py-3 px-4 text-sm font-bold text-foreground">
+          <div className="space-y-4">
+            {invoices.length === 0 ? (
+              <p className="text-muted-foreground">No invoices found.</p>
+            ) : (
+              invoices.map((invoice) => (
+                <Card key={invoice.id} className="bg-card border border-border">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-4 flex-1">
+                        <div className="p-3 bg-primary/10 rounded-lg h-fit">
+                          <FileText className="text-primary" size={24} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-foreground text-lg">{invoice.project || "N/A"}</h3>
+                          <p className="text-sm text-muted-foreground mt-1">Due: {invoice.date}</p>
+                          <p className="text-lg font-bold text-foreground mt-2">
                             ${invoice.amount.toLocaleString()}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-foreground">{invoice.date}</td>
-                          <td className="py-3 px-4">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(invoice.status)}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium block mb-3 ${getStatusBadge(
+                            invoice.status
+                          )}`}
+                        >
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                        </span>
+                        {invoice.status.toLowerCase() === 'pending' && (
+                            <Button 
+                                size="sm" 
+                                className="bg-chart-3 hover:bg-chart-3/90"
+                                onClick={() => handleMarkPaid(invoice.id)}
                             >
-                              {invoice.status}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <button className="p-1 hover:bg-secondary rounded transition-colors">
-                                <Eye size={16} className="text-muted-foreground hover:text-foreground" />
-                              </button>
-                              <button className="p-1 hover:bg-secondary rounded transition-colors">
-                                <Download size={16} className="text-muted-foreground hover:text-foreground" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                                <CheckCircle size={16} className="mr-1" /> Mark Paid
+                            </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
 
           <Link href="/dashboard/client">
             <Button variant="outline" className="mt-8 bg-secondary border-border">

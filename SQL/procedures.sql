@@ -1532,3 +1532,44 @@ EXCEPTION
         ROLLBACK;
 END;
 /
+
+-- Procedure to mark an invoice as paid
+CREATE OR REPLACE PROCEDURE mark_invoice_paid (
+    p_invoice_id IN NUMBER,
+    p_success OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE invoices
+    SET status = 'paid'
+    WHERE invoice_id = p_invoice_id;
+
+    p_success := 1;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        ROLLBACK;
+END;
+/
+
+-- Procedure to update a user's active status
+CREATE OR REPLACE PROCEDURE update_user_status (
+    p_user_id IN NUMBER,
+    p_is_active IN NUMBER, -- 1 for active, 0 for inactive
+    p_success OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE users
+    SET is_active = p_is_active
+    WHERE user_id = p_user_id;
+
+    p_success := 1;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        ROLLBACK;
+END;
+/

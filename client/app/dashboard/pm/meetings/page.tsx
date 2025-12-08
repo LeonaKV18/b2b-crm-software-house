@@ -7,12 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Clock, Users, Plus } from "lucide-react"
 import Link from "next/link"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea" // Ensure this exists, inferred from Admin page usage if similar
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 
 interface Meeting {
   id: number;
@@ -203,6 +199,26 @@ export default function PMMeetingsPage() {
       alert("Error saving MoM")
     }
   }
+
+  const handleDownloadMomPdf = async () => {
+    if (!selectedMeeting || !selectedMeeting.mom) {
+      alert("No Minutes of Meeting to download.");
+      return;
+    }
+
+    const pdf = new jsPDF();
+    const margin = 10;
+    const pageWidth = pdf.internal.pageSize.width - 2 * margin;
+
+    pdf.setFontSize(18);
+    pdf.text(`Minutes of Meeting: ${selectedMeeting.title}`, margin, margin + 5);
+
+    pdf.setFontSize(12);
+    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.time}\nAttendees: ${selectedMeeting.attendees || 'N/A'}\nLocation: ${selectedMeeting.location || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
+    pdf.text(textLines, margin, margin + 20);
+
+    pdf.save(`MoM_${selectedMeeting.id}.pdf`);
+  };
 
   const openMomDialog = (meeting: Meeting) => {
     setSelectedMeeting(meeting)
@@ -416,6 +432,7 @@ export default function PMMeetingsPage() {
                         />
                         <div className="flex justify-end gap-2 mt-4">
                             <Button variant="outline" onClick={() => setShowMomDialog(false)}>Cancel</Button>
+                            <Button variant="outline" onClick={handleDownloadMomPdf}>Download PDF</Button>
                             <Button onClick={handleSaveMom}>Save</Button>
                         </div>
                     </CardContent>

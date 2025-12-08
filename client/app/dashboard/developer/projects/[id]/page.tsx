@@ -103,6 +103,27 @@ export default function DeveloperProjectDetailsPage({ params }: { params: Promis
     }
   }
 
+  const handleMarkTaskDone = async (taskId: number) => {
+    if (!confirm("Are you sure you want to mark this task as 'done'?")) return;
+    try {
+        const res = await fetch(`/api/tasks/${taskId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: 'done' })
+        })
+
+        if (res.ok) {
+            alert("Task marked as done successfully!");
+            fetchData(projectId); // Refresh
+        } else {
+            alert("Failed to mark task as done.");
+        }
+    } catch (err) {
+        console.error(err)
+        alert("Error marking task as done.");
+    }
+  }
+
   if (!isLoggedIn || user?.role !== "developer") {
     return null
   }
@@ -179,9 +200,15 @@ export default function DeveloperProjectDetailsPage({ params }: { params: Promis
                                                 Lock Task
                                             </Button>
                                         ) : task.lockedby === user?.id ? (
-                                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded font-medium">
-                                                My Task
-                                            </span>
+                                            task.status !== 'done' ? (
+                                                <Button size="sm" onClick={() => handleMarkTaskDone(task.id)}>
+                                                    Mark Done
+                                                </Button>
+                                            ) : (
+                                                <span className="text-xs bg-chart-3/20 text-chart-3 px-2 py-1 rounded font-medium">
+                                                    Done
+                                                </span>
+                                            )
                                         ) : (
                                             <span className="text-xs bg-secondary text-muted-foreground px-2 py-1 rounded">
                                                 Locked

@@ -31,8 +31,8 @@ interface TeamMember {
   role: string;
   email: string;
   projects: number;
-  workload: number;
-  status: string;
+  workload: number; // Utilization percentage
+  status: string; // 'Active' or 'Inactive'
 }
 
 export default function TeamPage() {
@@ -109,6 +109,29 @@ export default function TeamPage() {
       alert("An error occurred")
     } finally {
       setAddLoading(false)
+    }
+  }
+
+  const handleStatusToggle = async (memberId: number, currentStatus: string) => {
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    if (!confirm(`Are you sure you want to set ${memberId} to ${newStatus}?`)) return;
+
+    try {
+        const res = await fetch(`/api/admin/users/${memberId}/status`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isActive: newStatus === 'Active' ? 1 : 0 })
+        });
+
+        if (res.ok) {
+            alert(`User status updated to ${newStatus}.`);
+            fetchTeam(); // Refresh list
+        } else {
+            alert("Failed to update user status.");
+        }
+    } catch (err) {
+        console.error("Error updating user status:", err);
+        alert("Error updating user status.");
     }
   }
 
@@ -213,15 +236,14 @@ export default function TeamPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              member.status === "Active" || !member.status // Fallback if status is missing
-                                ? "bg-chart-3/20 text-chart-3"
-                                : "bg-muted text-muted-foreground"
-                            }`}
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className={`h-7 text-xs ${member.status === 'Active' ? 'bg-chart-3/20 text-chart-3' : 'bg-muted/20 text-muted-foreground'}`}
+                            onClick={() => handleStatusToggle(member.id, member.status)}
                           >
-                            {member.status || "Active"}
-                          </span>
+                            {member.status}
+                          </Button>
                         </td>
                         <td className="py-3 px-4">
                           <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">

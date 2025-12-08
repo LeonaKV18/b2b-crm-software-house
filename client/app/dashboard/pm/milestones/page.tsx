@@ -169,6 +169,36 @@ export default function MilestonesPage() {
     }
   }
 
+  const handleMarkMilestoneComplete = async (milestone: Milestone) => {
+    if (milestone.status === 'done') {
+      alert("Milestone is already completed.");
+      return;
+    }
+
+    if (milestone.subtask_count > milestone.subtask_completed) {
+      if (!confirm(`This milestone still has ${milestone.subtask_count - milestone.subtask_completed} incomplete subtasks. Are you sure you want to mark it as done?`)) {
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/tasks/${milestone.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: 'done' })
+      });
+
+      if (res.ok) {
+        alert(`Milestone "${milestone.name}" marked as done.`);
+        fetchMilestones(); // Refresh
+      } else {
+        alert("Failed to mark milestone as done.");
+      }
+    } catch (err) {
+      console.error("Error marking milestone as done:", err);
+    }
+  }
+
   if (!isLoggedIn || user?.role !== "pm") {
     return null
   }
@@ -256,9 +286,16 @@ export default function MilestonesPage() {
                               {getDisplayStatus(milestone.status)}
                             </span>
                             <p className="text-xs text-muted-foreground">Due: {milestone.duedate}</p>
-                            <Button size="sm" variant="outline" className="mt-2 h-7 text-xs" onClick={() => openAddSubtaskDialog(milestone.id)}>
-                                <Plus size={12} className="mr-1"/> Add Task
-                            </Button>
+                            <div className="flex flex-col gap-2 mt-2">
+                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => openAddSubtaskDialog(milestone.id)}>
+                                    <Plus size={12} className="mr-1"/> Add Task
+                                </Button>
+                                {milestone.status !== 'done' && (
+                                    <Button size="sm" className="h-7 text-xs" onClick={() => handleMarkMilestoneComplete(milestone)}>
+                                        <CheckCircle size={12} className="mr-1"/> Mark Complete
+                                    </Button>
+                                )}
+                            </div>
                           </div>
                         </div>
 

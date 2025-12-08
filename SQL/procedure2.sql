@@ -1,3 +1,4 @@
+-- PROCEDURE2.SQL - Consolidated extra procedures
 -- New procedures for Meeting management
 CREATE OR REPLACE PROCEDURE get_projects_for_scheduling (
     p_projects_cursor OUT SYS_REFCURSOR

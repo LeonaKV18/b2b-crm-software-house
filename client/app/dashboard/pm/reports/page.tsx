@@ -199,7 +199,9 @@ export default function PMReportsPage() {
             <Link href="/dashboard/pm">
               <Button variant="outline" className="bg-secondary border-border mt-4">
                 ← Back to Dashboard
-
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

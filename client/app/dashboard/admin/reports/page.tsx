@@ -23,6 +23,8 @@ const Pie = dynamic(() => import("recharts").then((mod) => mod.Pie), { ssr: fals
 const Cell = dynamic(() => import("recharts").then((mod) => mod.Cell), { ssr: false })
 import { Download } from "lucide-react"
 import Link from "next/link"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 
 interface RevenueEntry {
   month: string;
@@ -101,6 +103,44 @@ export default function ReportsPage() {
     fetchReportsData()
   }, [isLoggedIn, user?.role, router])
 
+  const handleDownloadPdf = async () => {
+    const input = document.getElementById('admin-report-content');
+    if (input) {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const addPage = async (element: HTMLElement, pageNum: number, totalPages: number) => {
+          const canvas = await html2canvas(element, { scale: 2 }); // Higher scale for better quality
+          const imgData = canvas.toDataURL('image/png');
+          const imgWidth = 210; 
+          const pageHeight = 297; 
+          const imgHeight = canvas.height * imgWidth / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+
+          while (heightLeft >= -50) { // -50 to capture a little more from next page if needed
+              position = heightLeft - imgHeight;
+              pdf.addPage();
+              pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+              heightLeft -= pageHeight;
+          }
+      };
+
+      // Create a temporary div to render the content for PDF
+      const tempDiv = document.createElement('div');
+      tempDiv.style.width = '210mm'; // A4 width
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+      tempDiv.innerHTML = input.outerHTML; // Clone the content
+
+      await addPage(tempDiv, 1, 1); // Only one "page" for now
+      pdf.save('admin_report.pdf');
+      document.body.removeChild(tempDiv); // Clean up
+    }
+  };
+
   if (!isLoggedIn || user?.role !== "admin") {
     return null
   }
@@ -149,7 +189,11 @@ export default function ReportsPage() {
               <p className="text-sm text-muted-foreground">Business insights and performance metrics</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" className="bg-secondary border-border flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="bg-secondary border-border flex items-center gap-2"
+                onClick={handleDownloadPdf}
+              >
                 <Download size={20} />
                 Export PDF
               </Button>
@@ -162,7 +206,7 @@ export default function ReportsPage() {
         </div>
 
         {/* Main Content */}
-        <div className="p-8 space-y-8">
+        <div className="p-8 space-y-8" id="admin-report-content">
           {/* Revenue Chart */}
           <Card className="bg-card border border-border">
             <CardHeader>
