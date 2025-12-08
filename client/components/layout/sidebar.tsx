@@ -37,7 +37,7 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
   developer: [
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/developer" },
     { label: "Tasks", icon: <ClipboardList size={18} />, href: "/dashboard/developer/tasks" },
-    { label: "Milestones", icon: <CheckSquare size={18} />, href: "/dashboard/developer/milestones" },
+    { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/developer/projects" },
     { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/developer/meetings" },
   ],
   client: [

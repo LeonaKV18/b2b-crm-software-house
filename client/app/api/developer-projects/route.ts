@@ -13,20 +13,20 @@ export async function GET(req: NextRequest) {
 
     const bindVars = {
       p_user_id: Number(userId),
-      p_tasks_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+      p_projects_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
     };
 
     const result = await executeQuery<{
-      p_tasks_cursor: any[];
-    }>(`BEGIN get_developer_tasks(:p_user_id, :p_tasks_cursor); END;`, bindVars);
+      p_projects_cursor: any[];
+    }>(`BEGIN get_developer_projects(:p_user_id, :p_projects_cursor); END;`, bindVars);
 
-    if (result && result.p_tasks_cursor) {
-      return NextResponse.json(result.p_tasks_cursor);
+    if (result && result.p_projects_cursor) {
+      return NextResponse.json(result.p_projects_cursor);
     } else {
       return NextResponse.json([], { status: 200 });
     }
   } catch (error) {
-    console.error("Error fetching developer tasks:", error);
+    console.error("Error fetching developer projects:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
