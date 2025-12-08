@@ -1,12 +1,18 @@
 "use client"
-import { useState, useEffect } from "react" // Import useEffect
+import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, Clock, Users } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar, Clock, Users, Plus } from "lucide-react"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea" // Ensure this exists, inferred from Admin page usage if similar
 
 interface Meeting {
   id: number;
@@ -14,6 +20,21 @@ interface Meeting {
   date: string;
   time: string;
   attendees: number;
+  type: string;
+  location: string;
+  mom?: string;
+}
+
+interface Project {
+  id: number;
+  title: string;
+  client_name: string;
+}
+
+interface Developer {
+  id: number;
+  name: string;
+  email: string;
 }
 
 export default function PMMeetingsPage() {
@@ -25,36 +46,171 @@ export default function PMMeetingsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // MoM State
+  const [showMomDialog, setShowMomDialog] = useState(false)
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [momText, setMomText] = useState("")
+
+  // Schedule Meeting Dialog
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false)
+  const [myProjects, setMyProjects] = useState<Project[]>([])
+  const [projectDevelopers, setProjectDevelopers] = useState<Developer[]>([])
+  
+  // Form State
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+  const [meetingSubject, setMeetingSubject] = useState("")
+  const [meetingDate, setMeetingDate] = useState("")
+  const [meetingTime, setMeetingTime] = useState("")
+  const [selectedDeveloperIds, setSelectedDeveloperIds] = useState<string[]>([])
+  const [includeClient, setIncludeClient] = useState(false)
+
+  const fetchMeetings = async () => {
+    if (!user?.id) return
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/pm-meetings?userId=${user.id}`)
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+      const data = await response.json()
+      // Ensure data matches Meeting interface
+      // API returns: id, title, date_str, time_str, attendees, type, location, mom
+      // We need to map date_str -> date, time_str -> time if they differ
+      const mappedMeetings = data.map((m: any) => ({
+          ...m,
+          date: m.date_str || m.date,
+          time: m.time_str || m.time
+      }))
+      setMeetings(mappedMeetings)
+    } catch (err) {
+      console.error("Failed to fetch PM meetings:", err)
+      setError("Failed to load meetings.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchProjects = async () => {
+    if (!user?.id) return
+    try {
+      const res = await fetch(`/api/pm-meetings/projects?userId=${user.id}`)
+      if (res.ok) {
+        const data = await res.json()
+        setMyProjects(data)
+      }
+    } catch (err) {
+      console.error("Error fetching projects", err)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "pm") {
       router.push("/")
       return
     }
-
-    const fetchMeetings = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch(`/api/pm-meetings?userId=${user?.id}`)
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setMeetings(data)
-      } catch (err) {
-        console.error("Failed to fetch PM meetings:", err)
-        setError("Failed to load meetings.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (user?.id) { // Only fetch if user ID is available
-      fetchMeetings()
-    }
+    fetchMeetings()
+    fetchProjects()
   }, [isLoggedIn, user?.role, user?.id, router])
 
+  // Fetch developers when a project is selected
+  useEffect(() => {
+    if (selectedProjectId) {
+      const fetchDevs = async () => {
+        try {
+          const res = await fetch(`/api/pm-meetings/developers?projectId=${selectedProjectId}`)
+          if (res.ok) {
+            const data = await res.json()
+            setProjectDevelopers(data)
+            setSelectedDeveloperIds([]) // Reset selections
+          }
+        } catch (err) {
+          console.error("Error fetching developers", err)
+        }
+      }
+      fetchDevs()
+    } else {
+        setProjectDevelopers([])
+    }
+  }, [selectedProjectId])
+
+  const handleDeveloperToggle = (devId: string) => {
+    setSelectedDeveloperIds(prev => 
+      prev.includes(devId) ? prev.filter(id => id !== devId) : [...prev, devId]
+    )
+  }
+
+  const handleScheduleMeeting = async () => {
+    if (!selectedProjectId || !meetingSubject || !meetingDate || !meetingTime) {
+        alert("Please fill in all required fields.")
+        return
+    }
+
+    try {
+        const scheduledDateTime = new Date(`${meetingDate}T${meetingTime}`)
+
+        const res = await fetch("/api/pm-meetings/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                proposalId: selectedProjectId,
+                creatorId: user?.id,
+                subject: meetingSubject,
+                scheduledDate: scheduledDateTime.toISOString(),
+                meetingType: 'scrum', // Hardcoded default
+                developerIds: selectedDeveloperIds,
+                includeClient: includeClient
+            })
+        })
+
+        if (res.ok) {
+            setShowScheduleDialog(false)
+            setMeetingSubject("")
+            setMeetingDate("")
+            setMeetingTime("")
+            setSelectedProjectId("")
+            setSelectedDeveloperIds([])
+            setIncludeClient(false)
+            fetchMeetings()
+        } else {
+            alert("Failed to schedule meeting.")
+        }
+    } catch (err) {
+        console.error("Error scheduling meeting:", err)
+    }
+  }
+
+  const handleSaveMom = async () => {
+    if (!selectedMeeting) return
+    try {
+      // Reusing the general meeting update API since it's generic for updating MoM
+      const res = await fetch("/api/meetings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingId: selectedMeeting.id,
+          mom: momText
+        })
+      })
+
+      if (res.ok) {
+        setShowMomDialog(false)
+        setSelectedMeeting(null)
+        setMomText("")
+        fetchMeetings() // Refresh list
+      } else {
+        alert("Failed to save MoM")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Error saving MoM")
+    }
+  }
+
+  const openMomDialog = (meeting: Meeting) => {
+    setSelectedMeeting(meeting)
+    setMomText(meeting.mom || "")
+    setShowMomDialog(true)
+  }
+
   if (!isLoggedIn || user?.role !== "pm") {
-    router.push("/")
     return null
   }
 
@@ -68,9 +224,9 @@ export default function PMMeetingsPage() {
 
   if (error) {
     return (
-      <div className="flex h-screen bg-background items-center justify-center">
-        <p className="text-destructive">{error}</p>
-      </div>
+        <div className="flex h-screen bg-background items-center justify-center">
+            <p className="text-destructive">{error}</p>
+        </div>
     )
   }
 
@@ -79,37 +235,64 @@ export default function PMMeetingsPage() {
       <Sidebar currentPath={currentPath} />
 
       <div className="flex-1 overflow-auto">
-        {/* Top Bar */}
         <div className="bg-card border-b border-border sticky top-0 z-10">
-          <div className="px-8 py-4">
-            <h1 className="text-2xl font-bold text-foreground">Meetings</h1>
-            <p className="text-sm text-muted-foreground">Upcoming project meetings</p>
+          <div className="px-8 py-4 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Meetings & MoM</h1>
+              <p className="text-sm text-muted-foreground">Schedule meetings and manage minutes of meeting</p>
+            </div>
+            <Button onClick={() => setShowScheduleDialog(true)} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+                <Plus size={20} /> Schedule Meeting
+            </Button>
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-8">
           <div className="space-y-4">
             {meetings.length === 0 ? (
               <p className="text-muted-foreground">No meetings found for this Project Manager.</p>
             ) : (
               meetings.map((meeting) => (
-                <Card key={meeting.id} className="bg-card border border-border">
+                <Card key={meeting.id} className="bg-card border border-border hover:border-primary/50 transition-colors">
                   <CardContent className="pt-6">
-                    <h3 className="font-bold text-foreground mb-3">{meeting.title}</h3>
-                    <div className="flex gap-6">
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Calendar size={16} />
-                        {meeting.date}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Clock size={16} />
-                        {meeting.time}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                        <Users size={16} /> {/* Assuming Users icon for attendees */}
-                        {meeting.attendees} attendees
-                      </div>
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
+                            {/* Type display removed as per recent instructions */}
+                            
+                            <div className="flex flex-wrap gap-4 mt-4 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Calendar size={16} />
+                                    {meeting.date}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Clock size={16} />
+                                    {meeting.time}
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Users size={16} />
+                                    {meeting.attendees} attendees
+                                </div>
+                            </div>
+                            {meeting.mom && (
+                                <div className="mt-4 p-2 bg-secondary/50 rounded text-sm text-muted-foreground">
+                                    <strong>MoM:</strong> {meeting.mom.substring(0, 100)}...
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
+                                Join
+                            </Button>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="bg-secondary border-border hover:bg-secondary/80"
+                                onClick={() => openMomDialog(meeting)}
+                            >
+                                MoM
+                            </Button>
+                        </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -123,6 +306,122 @@ export default function PMMeetingsPage() {
             </Button>
           </Link>
         </div>
+
+        {/* Schedule Dialog (PM Specific) */}
+        <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Schedule Meeting</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label>Project</Label>
+                        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {myProjects.map(p => (
+                                    <SelectItem key={p.id} value={p.id.toString()}>{p.title} ({p.client_name})</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Subject</Label>
+                        <Input 
+                            placeholder="Meeting Subject" 
+                            value={meetingSubject}
+                            onChange={(e) => setMeetingSubject(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Date</Label>
+                            <Input 
+                                type="date"
+                                value={meetingDate}
+                                onChange={(e) => setMeetingDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Time</Label>
+                            <Input 
+                                type="time"
+                                value={meetingTime}
+                                onChange={(e) => setMeetingTime(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Type removed */}
+
+                    {selectedProjectId && (
+                        <div className="space-y-2 border-t pt-2 mt-2">
+                            <Label>Attendees</Label>
+                            
+                            {/* Client Toggle */}
+                            <div className="flex items-center space-x-2 mb-2 p-2 bg-secondary/30 rounded">
+                                <Checkbox 
+                                    id="includeClient" 
+                                    checked={includeClient}
+                                    onCheckedChange={(c) => setIncludeClient(c as boolean)}
+                                />
+                                <Label htmlFor="includeClient" className="cursor-pointer">Invite Client</Label>
+                            </div>
+
+                            {/* Developers List */}
+                            <Label className="text-xs text-muted-foreground">Select Developers:</Label>
+                            <div className="max-h-32 overflow-y-auto space-y-2 border rounded p-2">
+                                {projectDevelopers.length === 0 ? (
+                                    <p className="text-xs text-muted-foreground">No developers found for this project.</p>
+                                ) : (
+                                    projectDevelopers.map(dev => (
+                                        <div key={dev.id} className="flex items-center space-x-2">
+                                            <Checkbox 
+                                                id={`dev-${dev.id}`}
+                                                checked={selectedDeveloperIds.includes(dev.id.toString())}
+                                                onCheckedChange={() => handleDeveloperToggle(dev.id.toString())}
+                                            />
+                                            <Label htmlFor={`dev-${dev.id}`} className="text-sm cursor-pointer">{dev.name}</Label>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowScheduleDialog(false)}>Cancel</Button>
+                    <Button onClick={handleScheduleMeeting}>Schedule</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* MoM Dialog (Shared style with Admin) */}
+        {showMomDialog && selectedMeeting && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <Card className="w-full max-w-lg bg-card border border-border">
+                    <CardHeader>
+                        <CardTitle className="text-foreground">Minutes of Meeting - {selectedMeeting.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Textarea
+                            className="w-full h-40 p-2 bg-secondary border border-border rounded-md text-foreground"
+                            placeholder="Enter minutes of meeting..."
+                            value={momText}
+                            onChange={(e) => setMomText(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="outline" onClick={() => setShowMomDialog(false)}>Cancel</Button>
+                            <Button onClick={handleSaveMom}>Save</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+             </div>
+        )}
       </div>
     </div>
   )

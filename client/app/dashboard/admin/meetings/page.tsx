@@ -40,7 +40,6 @@ export default function MeetingsPage() {
     title: "",
     date: "",
     time: "",
-    type: "",
     proposalId: "",
     includeClient: false,
     location: ""
@@ -88,6 +87,7 @@ export default function MeetingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          type: "scrum", // Defaulting to scrum as types are removed
           userId: user?.id,
           subject: formData.title + (formData.location ? ` - ${formData.location}` : "")
         })
@@ -99,7 +99,6 @@ export default function MeetingsPage() {
             title: "",
             date: "",
             time: "",
-            type: "",
             proposalId: "",
             includeClient: false,
             location: ""
@@ -236,20 +235,6 @@ export default function MeetingsPage() {
                     onChange={(e) => setFormData({...formData, time: e.target.value})}
                     required
                   />
-                  <select 
-                    className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground"
-                    value={formData.type}
-                    onChange={(e) => setFormData({...formData, type: e.target.value})}
-                    required
-                  >
-                    <option value="">Meeting Type</option>
-                    <option value="scrum">Scrum</option>
-                    <option value="sprint_planning">Sprint Planning</option>
-                    <option value="sprint_review">Sprint Review</option>
-                    <option value="sprint_retrospective">Sprint Retrospective</option>
-                    <option value="srs">SRS</option>
-                    <option value="kickoff">Kickoff</option>
-                  </select>
                   <div className="flex items-center gap-2">
                     <input 
                         type="checkbox" 
@@ -314,7 +299,6 @@ export default function MeetingsPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">{meeting.type}</p>
 
                       <div className="flex flex-wrap gap-4 mt-4 text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
