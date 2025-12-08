@@ -44,6 +44,7 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/client" },
     { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/client/proposals" },
     { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/client/projects" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/client/meetings" },
     { label: "Invoices", icon: <CreditCard size={18} />, href: "/dashboard/client/invoices" },
   ],
 }
