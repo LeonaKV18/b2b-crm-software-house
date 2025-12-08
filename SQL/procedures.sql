@@ -128,7 +128,7 @@ BEGIN
             'Active' AS status -- Dummy data for now
         FROM
             users u
-        JOIN
+        LEFT JOIN -- Use LEFT JOIN to include users without team assignments
             team_members tm ON u.user_id = tm.user_id
         WHERE
             u.role IN ('pm', 'developer'); -- Only show PMs and Developers in team management
@@ -878,6 +878,47 @@ BEGIN
 EXCEPTION
     WHEN OTHERS THEN
         p_success := 0;
+        ROLLBACK;
+END;
+/
+
+-- Procedure to create an employee (pm or developer)
+CREATE OR REPLACE PROCEDURE create_employee (
+    p_email IN VARCHAR2,
+    p_name IN VARCHAR2,
+    p_password IN VARCHAR2,
+    p_role IN VARCHAR2,
+    p_success OUT NUMBER,
+    p_message OUT VARCHAR2
+)
+AS
+    v_exists NUMBER;
+BEGIN
+    -- Check if role is valid for employee
+    IF p_role NOT IN ('pm', 'developer') THEN
+        p_success := 0;
+        p_message := 'Invalid role. Only "pm" or "developer" roles can be added as employees.';
+        RETURN;
+    END IF;
+
+    -- Check if email exists
+    SELECT COUNT(*) INTO v_exists FROM users WHERE email = p_email;
+    
+    IF v_exists > 0 THEN
+        p_success := 0;
+        p_message := 'User with this email already exists.';
+    ELSE
+        INSERT INTO users (email, name, password, role, is_active)
+        VALUES (p_email, p_name, p_password, p_role, 1);
+        
+        p_success := 1;
+        p_message := 'Employee created successfully.';
+        COMMIT;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        p_message := 'Database error: ' || SQLERRM;
         ROLLBACK;
 END;
 /

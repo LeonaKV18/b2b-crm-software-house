@@ -9,6 +9,21 @@ import { Input } from "@/components/ui/input"
 import { Plus, Search } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react" // Import useEffect
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface TeamMember {
   id: number;
@@ -30,31 +45,72 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Add Member State
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [newName, setNewName] = useState("")
+  const [newEmail, setNewEmail] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [newRole, setNewRole] = useState("developer")
+  const [addLoading, setAddLoading] = useState(false)
+
+  const fetchTeam = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/team")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setTeam(data)
+    } catch (err) {
+      console.error("Failed to fetch team members:", err)
+      setError("Failed to load team members.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
       router.push("/")
       return
     }
-
-    const fetchTeam = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/team")
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setTeam(data)
-      } catch (err) {
-        console.error("Failed to fetch team members:", err)
-        setError("Failed to load team members.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchTeam()
   }, [isLoggedIn, user?.role, router])
+
+  const handleAddMember = async () => {
+    setAddLoading(true)
+    try {
+      const response = await fetch("/api/team/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newName,
+          email: newEmail,
+          password: newPassword,
+          role: newRole,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setIsAddOpen(false)
+        setNewName("")
+        setNewEmail("")
+        setNewPassword("")
+        setNewRole("developer")
+        fetchTeam() // Refresh list
+      } else {
+        alert(data.error || "Failed to create team member")
+      }
+    } catch (err) {
+      console.error("Error adding member:", err)
+      alert("An error occurred")
+    } finally {
+      setAddLoading(false)
+    }
+  }
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
@@ -90,7 +146,7 @@ export default function TeamPage() {
               <h1 className="text-2xl font-bold text-foreground">Team Management</h1>
               <p className="text-sm text-muted-foreground">Manage team members and workload</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+            <Button onClick={() => setIsAddOpen(true)} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
               <Plus size={20} />
               Add Team Member
             </Button>
@@ -134,37 +190,37 @@ export default function TeamPage() {
                         <td className="py-3 px-4">
                           <p className="font-medium text-foreground">{member.name}</p>
                         </td>
-                        <td className="py-3 px-4 text-sm text-foreground">{member.role}</td>
+                        <td className="py-3 px-4 text-sm text-foreground capitalize">{member.role}</td>
                         <td className="py-3 px-4 text-sm text-foreground">{member.email}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-foreground">{member.projects}</td>
+                        <td className="py-3 px-4 text-sm font-medium text-foreground">{member.projects || 0}</td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 w-16 bg-secondary rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
-                                  member.workload > 85
+                                  (member.workload || 0) > 85
                                     ? "bg-destructive"
-                                    : member.workload > 70
+                                    : (member.workload || 0) > 70
                                       ? "bg-accent"
                                       : "bg-chart-3"
                                 }`}
-                                style={{ width: `${member.workload}%` }}
+                                style={{ width: `${member.workload || 0}%` }}
                               />
                             </div>
                             <span className="text-xs font-medium text-foreground w-8 text-right">
-                              {member.workload}%
+                              {member.workload || 0}%
                             </span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              member.status === "Active"
+                              member.status === "Active" || !member.status // Fallback if status is missing
                                 ? "bg-chart-3/20 text-chart-3"
                                 : "bg-muted text-muted-foreground"
                             }`}
                           >
-                            {member.status}
+                            {member.status || "Active"}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -193,6 +249,64 @@ export default function TeamPage() {
               </Button>
             </Link>
           </div>
+
+          {/* Add Member Dialog */}
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Team Member</DialogTitle>
+                <DialogDescription>
+                  Create a new account for a Project Manager or Developer.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Full Name</label>
+                  <Input
+                    placeholder="Jane Doe"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="jane@example.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Password</label>
+                  <Input
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Role</label>
+                  <Select onValueChange={setNewRole} value={newRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="pm">Project Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddMember} disabled={addLoading || !newName || !newEmail || !newPassword}>
+                  {addLoading ? "Creating..." : "Create Account"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </div>
