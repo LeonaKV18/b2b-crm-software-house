@@ -56,7 +56,6 @@ export default function PMProjectsPage() {
   }, [isLoggedIn, user?.role, user?.id, router])
 
   if (!isLoggedIn || user?.role !== "pm") {
-    router.push("/")
     return null
   }
 
@@ -178,7 +177,7 @@ export default function PMProjectsPage() {
                     </div>
 
                     {/* Link to actual project details page, assuming /dashboard/admin/projects/[id] works for all */}
-                    <Link href={`/dashboard/admin/projects/${project.id}`} className="w-full">
+                    <Link href={`/dashboard/pm/projects/${project.id}`} className="w-full">
                       <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
                         View Details
                       </Button>

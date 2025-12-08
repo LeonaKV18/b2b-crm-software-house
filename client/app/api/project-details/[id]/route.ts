@@ -2,9 +2,10 @@ import { executeQuery } from "@/lib/oracle";
 import { NextRequest, NextResponse } from "next/server";
 import * as oracledb from 'oracledb';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });

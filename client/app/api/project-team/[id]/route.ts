@@ -2,9 +2,10 @@ import { executeQuery } from "@/lib/oracle";
 import { NextRequest, NextResponse } from "next/server";
 import * as oracledb from 'oracledb';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const projectId = params.id;
+    const { id } = await params;
+    const projectId = id;
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     if (result && result.p_team_members_cursor) {
       return NextResponse.json(result.p_team_members_cursor);
     } else {
-      return NextResponse.json({ error: "No team members found for this project" }, { status: 404 });
+      return NextResponse.json([]);
     }
   } catch (error) {
     console.error("Error fetching project team members:", error);

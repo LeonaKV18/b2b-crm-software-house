@@ -163,11 +163,6 @@ export default function PMDashboard() {
                 Milestones
               </Button>
             </Link>
-            <Link href="/dashboard/pm/team">
-              <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
-                Team
-              </Button>
-            </Link>
             <Link href="/dashboard/pm/meetings">
               <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
                 Meetings

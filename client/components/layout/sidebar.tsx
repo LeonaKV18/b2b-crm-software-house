@@ -34,7 +34,6 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/pm" },
     { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/pm/projects" },
     { label: "Milestones", icon: <CheckSquare size={18} />, href: "/dashboard/pm/milestones" },
-    { label: "Team", icon: <Users size={18} />, href: "/dashboard/pm/team" },
     { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/pm/meetings" },
     { label: "Reports", icon: <LineChart size={18} />, href: "/dashboard/pm/reports" },
   ],

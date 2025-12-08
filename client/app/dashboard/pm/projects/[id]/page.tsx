@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -43,10 +43,12 @@ interface Developer {
   email: string;
 }
 
-export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
+export default function PMProjectDetailsPage() {
+  const params = useParams()
+  const id = params?.id as string
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
-  const [currentPath] = useState(`/dashboard/admin/projects/${params.id}`)
+  const [currentPath] = useState(`/dashboard/pm/projects`) // Generalize path for sidebar
 
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -58,19 +60,30 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
   const [availableDevelopers, setAvailableDevelopers] = useState<Developer[]>([])
   const [selectedDeveloper, setSelectedDeveloper] = useState<string>("")
 
+  // Milestone Dialog State
+  const [showAddMilestoneDialog, setShowAddMilestoneDialog] = useState(false)
+  const [newMilestone, setNewMilestone] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    priority: "Medium"
+  })
+
   useEffect(() => {
-    if (!isLoggedIn || user?.role !== "admin") {
+    if (!isLoggedIn || user?.role !== "pm") {
       router.push("/")
       return
     }
+
+    if (!id) return;
 
     const fetchProjectData = async () => {
       try {
         setLoading(true)
         const [projectRes, teamRes, milestonesRes] = await Promise.all([
-          fetch(`/api/project-details/${params.id}`),
-          fetch(`/api/project-team/${params.id}`),
-          fetch(`/api/project-milestones/${params.id}`),
+          fetch(`/api/project-details/${id}`),
+          fetch(`/api/project-team/${id}`),
+          fetch(`/api/project-milestones/${id}`),
         ])
 
         if (!projectRes.ok) throw new Error(`HTTP error! Project details: ${projectRes.status}`)
@@ -93,7 +106,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
     }
 
     fetchProjectData()
-  }, [isLoggedIn, user?.role, router, params.id])
+  }, [isLoggedIn, user?.role, router, id])
 
   useEffect(() => {
     if (showAssignDeveloperDialog) {
@@ -143,7 +156,42 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
     }
   }
 
-  if (!isLoggedIn || user?.role !== "admin") {
+  const handleAddMilestone = async () => {
+      if (!projectDetails?.id) return
+      try {
+          const res = await fetch("/api/tasks/create", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  proposalId: projectDetails.id,
+                  title: newMilestone.title,
+                  description: newMilestone.description,
+                  dueDate: newMilestone.dueDate,
+                  priority: newMilestone.priority
+              })
+          })
+
+          if (res.ok) {
+              alert("Milestone added successfully")
+              setShowAddMilestoneDialog(false)
+              setNewMilestone({ title: "", description: "", dueDate: "", priority: "Medium" })
+              // Refresh milestones
+              const milestonesRes = await fetch(`/api/project-milestones/${id}`)
+              if (milestonesRes.ok) {
+                  const milestonesData = await milestonesRes.json()
+                  setMilestones(milestonesData)
+              }
+          } else {
+              alert("Failed to add milestone")
+          }
+      } catch (err) {
+          console.error("Error adding milestone:", err)
+          alert("Error adding milestone")
+      }
+  }
+
+
+  if (!isLoggedIn || user?.role !== "pm") {
     return null
   }
 
@@ -219,7 +267,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
               <p className="text-sm text-muted-foreground">{project.client}</p>
             </div>
-            <Link href="/dashboard/admin/projects">
+            <Link href="/dashboard/pm/projects">
               <Button variant="outline" className="bg-secondary border-border">
                 ← Back to Projects
               </Button>
@@ -315,6 +363,41 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-foreground">Assigned Team</CardTitle>
+                  <Dialog open={showAssignDeveloperDialog} onOpenChange={setShowAssignDeveloperDialog}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="bg-primary hover:bg-primary/90 flex items-center gap-1">
+                        <Plus size={16} />
+                        Assign Developer
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Assign Developer to Project Tasks</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">This will assign the selected developer to all currently unassigned tasks within this project.</p>
+                        <Select onValueChange={setSelectedDeveloper} value={selectedDeveloper}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a developer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableDevelopers.map((dev) => (
+                              <SelectItem key={dev.id} value={String(dev.id)}>
+                                {dev.name} ({dev.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          onClick={handleAssignDeveloper} 
+                          disabled={!selectedDeveloper}
+                          className="w-full"
+                        >
+                          Assign Developer
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
@@ -343,6 +426,55 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-foreground">Milestones</CardTitle>
+                  <Dialog open={showAddMilestoneDialog} onOpenChange={setShowAddMilestoneDialog}>
+                      <DialogTrigger asChild>
+                          <Button size="sm" className="bg-primary hover:bg-primary/90 flex items-center gap-1">
+                              <Plus size={16} />
+                              Add
+                          </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                          <DialogHeader>
+                              <DialogTitle>Add New Milestone</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                              <input 
+                                  placeholder="Milestone Title" 
+                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
+                                  value={newMilestone.title}
+                                  onChange={(e) => setNewMilestone({...newMilestone, title: e.target.value})}
+                              />
+                              <textarea 
+                                  placeholder="Description" 
+                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
+                                  value={newMilestone.description}
+                                  onChange={(e) => setNewMilestone({...newMilestone, description: e.target.value})}
+                              />
+                              <input 
+                                  type="date"
+                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
+                                  value={newMilestone.dueDate}
+                                  onChange={(e) => setNewMilestone({...newMilestone, dueDate: e.target.value})}
+                              />
+                              <Select 
+                                  onValueChange={(val) => setNewMilestone({...newMilestone, priority: val})} 
+                                  value={newMilestone.priority}
+                              >
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Priority" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      <SelectItem value="Low">Low</SelectItem>
+                                      <SelectItem value="Medium">Medium</SelectItem>
+                                      <SelectItem value="High">High</SelectItem>
+                                  </SelectContent>
+                              </Select>
+                              <Button onClick={handleAddMilestone} className="w-full">
+                                  Add Milestone
+                              </Button>
+                          </div>
+                      </DialogContent>
+                  </Dialog>
                 </div>
               </CardHeader>
               <CardContent>
