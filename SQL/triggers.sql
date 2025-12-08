@@ -42,3 +42,37 @@ BEGIN
     );
 END;
 /
+
+-- Trigger to automatically update completed_date when a task is marked as done
+CREATE OR REPLACE TRIGGER trg_task_completion
+BEFORE UPDATE ON tasks
+FOR EACH ROW
+BEGIN
+    IF :NEW.status = 'done' AND :OLD.status != 'done' THEN
+        :NEW.completed_date := SYSDATE;
+    ELSIF :NEW.status != 'done' THEN
+        :NEW.completed_date := NULL;
+    END IF;
+END;
+/
+
+-- Trigger to prevent creating tasks for closed/completed proposals
+CREATE OR REPLACE TRIGGER trg_prevent_tasks_on_closed_proposal
+BEFORE INSERT ON tasks
+FOR EACH ROW
+DECLARE
+    v_proposal_status VARCHAR2(50);
+BEGIN
+    SELECT status INTO v_proposal_status
+    FROM proposals
+    WHERE proposal_id = :NEW.proposal_id;
+
+    IF v_proposal_status IN ('completed', 'rejected', 'cancelled') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Cannot add tasks to a closed or rejected proposal.');
+    END IF;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        -- Should be handled by FK constraint, but safe to ignore here
+        NULL;
+END;
+/
