@@ -13,12 +13,8 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<UserRole>("admin")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
-  const [resetEmail, setResetEmail] = useState("")
-  const [resetSent, setResetSent] = useState(false)
 
   // Registration State
   const [isRegistering, setIsRegistering] = useState(false)
@@ -45,7 +41,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setTimeout(() => {
-      login(email, password, role)
+      // Role is determined by backend, passing "admin" as placeholder to satisfy API requirements
+      login(email, password, "admin")
       setLoading(false)
     }, 500)
   }
@@ -81,18 +78,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleForgotPassword = (e: React.FormEvent) => {
-    e.preventDefault()
-    setTimeout(() => {
-      setResetSent(true)
-      setTimeout(() => {
-        setResetSent(false)
-        setShowForgotPassword(false)
-        setResetEmail("")
-      }, 3000)
-    }, 500)
   }
 
   if (isLoggedIn) {
@@ -231,7 +216,7 @@ export default function LoginPage() {
               </div>
             </CardContent>
           </Card>
-        ) : !showForgotPassword ? (
+        ) : (
           <Card className="w-full max-w-md border-border">
             <CardContent className="pt-8">
               <div className="mb-8">
@@ -275,22 +260,6 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Role Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Login as</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value as UserRole)}
-                    className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="sales">Sales Manager</option>
-                    <option value="pm">Project Manager</option>
-                    <option value="developer">Developer</option>
-                    <option value="client">Client</option>
-                  </select>
-                </div>
-
                 {/* Login Button */}
                 <Button
                   type="submit"
@@ -301,15 +270,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              {/* Forgot Password Link */}
-              <div className="mt-6 pt-6 border-t border-border space-y-4 text-center">
-                <button
-                  type="button"
-                  onClick={() => setShowForgotPassword(true)}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors block w-full"
-                >
-                  Forgot password?
-                </button>
+              <div className="mt-6 pt-6 border-t border-border text-center">
                 <p className="text-sm text-muted-foreground">
                   Don't have an account?{" "}
                   <button
@@ -319,62 +280,6 @@ export default function LoginPage() {
                     Sign Up
                   </button>
                 </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="w-full max-w-md border-border">
-            <CardContent className="pt-8">
-              <div className="mb-8">
-                <h2 className="text-3xl font-bold text-foreground mb-2">Reset Password</h2>
-                <p className="text-muted-foreground">Enter your email to receive reset instructions</p>
-              </div>
-
-              {resetSent ? (
-                <div className="space-y-4">
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <p className="text-green-400 text-sm font-medium">✓ Reset link sent!</p>
-                    <p className="text-muted-foreground text-xs mt-2">
-                      Check your email for password reset instructions. Redirecting...
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleForgotPassword} className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Email Address</label>
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      required
-                      className="bg-secondary border border-border text-foreground"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={!resetEmail}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-                  >
-                    Send Reset Link
-                  </Button>
-                </form>
-              )}
-
-              <div className="mt-6 pt-6 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowForgotPassword(false)
-                    setResetEmail("")
-                    setResetSent(false)
-                  }}
-                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Back to Sign In
-                </button>
               </div>
             </CardContent>
           </Card>
