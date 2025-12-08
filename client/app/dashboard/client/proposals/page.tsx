@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { FileText, Download, CheckCircle, XCircle, Plus } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react" // Import useEffect
@@ -32,6 +33,10 @@ export default function ClientProposalsPage() {
   const [newTitle, setNewTitle] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [newValue, setNewValue] = useState("")
+  const [newExpectedClose, setNewExpectedClose] = useState("")
+  const [newFunctionalReq, setNewFunctionalReq] = useState("")
+  const [newNonFunctionalReq, setNewNonFunctionalReq] = useState("")
+  const [newComments, setNewComments] = useState("")
 
   const fetchProposals = async () => {
     try {
@@ -75,6 +80,10 @@ export default function ClientProposalsPage() {
           title: newTitle,
           description: newDescription,
           value: newValue,
+          expectedClose: newExpectedClose,
+          functionalReq: newFunctionalReq,
+          nonFunctionalReq: newNonFunctionalReq,
+          comments: newComments
         }),
       })
 
@@ -83,6 +92,10 @@ export default function ClientProposalsPage() {
         setNewTitle("")
         setNewDescription("")
         setNewValue("")
+        setNewExpectedClose("")
+        setNewFunctionalReq("")
+        setNewNonFunctionalReq("")
+        setNewComments("")
         fetchProposals() // Refresh list
       } else {
         const errorData = await response.json()
@@ -160,36 +173,82 @@ export default function ClientProposalsPage() {
               <CardContent>
                 <form onSubmit={handleCreateProposal} className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Title</label>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Project Title</label>
                     <Input
-                      placeholder="e.g. Mobile App Development"
+                      placeholder="e.g. E-commerce Platform Revamp"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       required
                       className="bg-secondary border-border"
                     />
                   </div>
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Budget ($)</label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 15000"
-                      value={newValue}
-                      onChange={(e) => setNewValue(e.target.value)}
-                      required
-                      className="bg-secondary border-border"
-                    />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Lumpsum Fee ($)</label>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 50000"
+                        value={newValue}
+                        onChange={(e) => setNewValue(e.target.value)}
+                        required
+                        className="bg-secondary border-border"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-1 block">Expected Close Date</label>
+                      <Input
+                        type="date"
+                        value={newExpectedClose}
+                        onChange={(e) => setNewExpectedClose(e.target.value)}
+                        required
+                        className="bg-secondary border-border"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Description</label>
-                    <textarea
+                    <label className="text-sm font-medium text-foreground mb-1 block">Project Description</label>
+                    <Textarea
                       value={newDescription}
                       onChange={(e) => setNewDescription(e.target.value)}
-                      placeholder="Describe your project needs..."
-                      className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                      placeholder="Brief overview of the project..."
+                      className="h-24 bg-secondary border-border"
                     />
                   </div>
-                  <div className="flex gap-2">
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Functional Requirements</label>
+                    <p className="text-xs text-muted-foreground mb-2">As a user, I want to...</p>
+                    <Textarea
+                      value={newFunctionalReq}
+                      onChange={(e) => setNewFunctionalReq(e.target.value)}
+                      placeholder="- As a user, I want to login via Google&#10;- As an admin, I want to view sales reports"
+                      className="h-32 bg-secondary border-border"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Non-Functional Requirements</label>
+                    <Textarea
+                      value={newNonFunctionalReq}
+                      onChange={(e) => setNewNonFunctionalReq(e.target.value)}
+                      placeholder="e.g. The system must handle 10,000 concurrent users. Response time under 200ms."
+                      className="h-24 bg-secondary border-border"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Additional Comments</label>
+                    <Textarea
+                      value={newComments}
+                      onChange={(e) => setNewComments(e.target.value)}
+                      placeholder="Any other details..."
+                      className="h-20 bg-secondary border-border"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 mt-4">
                     <Button type="submit" className="bg-primary hover:bg-primary/90">
                       Submit Proposal
                     </Button>
