@@ -77,10 +77,13 @@ BEGIN
             p.proposal_id AS "id",
             c.company_name AS "client",
             p.title AS "title",
+            p.description AS "description",
             p.status AS "status",
             p.value AS "value",
             u.name AS "createdBy",
-            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
+            TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date",
+            p.admin_comments AS "adminComments",
+            p.pm_user_id AS "pmId"
         FROM
             proposals p
         JOIN
@@ -503,16 +506,6 @@ BEGIN
 END;
 /
 
-
-
-
-
-
-
-
-
-
-
 CREATE OR REPLACE PROCEDURE get_admin_dashboard_stats (
     p_total_clients OUT NUMBER,
     p_active_projects OUT NUMBER,
@@ -785,5 +778,106 @@ BEGIN
             proposals p ON m.proposal_id = p.proposal_id
         WHERE
             p.pm_user_id = p_user_id;
+END;
+/
+
+-- New Procedures for Admin Proposal Management
+
+CREATE OR REPLACE PROCEDURE get_available_pms (
+    p_pms_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_pms_cursor FOR
+        SELECT
+            u.user_id AS "id",
+            u.name AS "name",
+            (SELECT COUNT(*) 
+             FROM proposals p 
+             WHERE p.pm_user_id = u.user_id 
+             AND p.status IN ('active', 'in_progress', 'approved')) AS "activeProjects"
+        FROM
+            users u
+        WHERE
+            u.role = 'pm'
+            AND u.is_active = 1;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE assign_pm_to_proposal (
+    p_proposal_id IN NUMBER,
+    p_pm_user_id IN NUMBER,
+    p_success OUT NUMBER,
+    p_message OUT VARCHAR2
+)
+AS
+    v_active_projects NUMBER;
+BEGIN
+    -- Check active project count for the PM
+    SELECT COUNT(*) 
+    INTO v_active_projects 
+    FROM proposals 
+    WHERE pm_user_id = p_pm_user_id 
+    AND status IN ('active', 'in_progress', 'approved');
+
+    IF v_active_projects >= 5 THEN
+        p_success := 0;
+        p_message := 'Project Manager is already assigned to 5 or more active projects.';
+    ELSE
+        UPDATE proposals
+        SET pm_user_id = p_pm_user_id
+        WHERE proposal_id = p_proposal_id;
+        
+        p_success := 1;
+        p_message := 'Project Manager assigned successfully.';
+        COMMIT;
+    END IF;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        p_message := 'Database error: ' || SQLERRM;
+        ROLLBACK;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE approve_proposal (
+    p_proposal_id IN NUMBER,
+    p_comment IN CLOB,
+    p_success OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE proposals
+    SET status = 'approved',
+        admin_comments = p_comment
+    WHERE proposal_id = p_proposal_id;
+    
+    p_success := 1;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        ROLLBACK;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE reject_proposal (
+    p_proposal_id IN NUMBER,
+    p_comment IN CLOB,
+    p_success OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE proposals
+    SET status = 'rejected',
+        admin_comments = p_comment
+    WHERE proposal_id = p_proposal_id;
+    
+    p_success := 1;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        ROLLBACK;
 END;
 /
