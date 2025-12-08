@@ -5,11 +5,11 @@ import { UserRole } from "@/lib/auth-context";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, role } = await req.json();
-    console.log("Login attempt for:", { email, role });
+    const { email, password } = await req.json();
+    console.log("Login attempt for:", { email });
 
-    if (!email || !password || !role) {
-      return NextResponse.json({ error: "Email, password, and role are required" }, { status: 400 });
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
     const bindVars = {

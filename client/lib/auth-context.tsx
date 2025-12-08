@@ -17,7 +17,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   isLoggedIn: boolean
-  login: (email: string, password: string, role: UserRole) => Promise<boolean>
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   setUser: (user: User | null) => void
 }
@@ -28,14 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  const login = async (email: string, password: string, role: UserRole): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (response.ok) {

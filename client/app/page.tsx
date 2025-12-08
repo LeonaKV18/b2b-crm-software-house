@@ -41,8 +41,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setTimeout(() => {
-      // Role is determined by backend, passing "admin" as placeholder to satisfy API requirements
-      login(email, password, "admin")
+      // Role is determined by backend
+      login(email, password)
       setLoading(false)
     }, 500)
   }
