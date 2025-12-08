@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Clock, Users, Plus } from "lucide-react"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 
@@ -176,7 +182,6 @@ export default function PMMeetingsPage() {
   const handleSaveMom = async () => {
     if (!selectedMeeting) return
     try {
-      // Reusing the general meeting update API since it's generic for updating MoM
       const res = await fetch("/api/meetings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -274,7 +279,6 @@ export default function PMMeetingsPage() {
                     <div className="flex items-start justify-between">
                         <div className="flex-1">
                             <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
-                            {/* Type display removed as per recent instructions */}
                             
                             <div className="flex flex-wrap gap-4 mt-4 text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -323,7 +327,6 @@ export default function PMMeetingsPage() {
           </Link>
         </div>
 
-        {/* Schedule Dialog (PM Specific) */}
         <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
             <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -372,13 +375,10 @@ export default function PMMeetingsPage() {
                         </div>
                     </div>
 
-                    {/* Type removed */}
-
                     {selectedProjectId && (
                         <div className="space-y-2 border-t pt-2 mt-2">
                             <Label>Attendees</Label>
                             
-                            {/* Client Toggle */}
                             <div className="flex items-center space-x-2 mb-2 p-2 bg-secondary/30 rounded">
                                 <Checkbox 
                                     id="includeClient" 
@@ -388,7 +388,6 @@ export default function PMMeetingsPage() {
                                 <Label htmlFor="includeClient" className="cursor-pointer">Invite Client</Label>
                             </div>
 
-                            {/* Developers List */}
                             <Label className="text-xs text-muted-foreground">Select Developers:</Label>
                             <div className="max-h-32 overflow-y-auto space-y-2 border rounded p-2">
                                 {projectDevelopers.length === 0 ? (
@@ -416,7 +415,6 @@ export default function PMMeetingsPage() {
             </DialogContent>
         </Dialog>
 
-        {/* MoM Dialog (Shared style with Admin) */}
         {showMomDialog && selectedMeeting && (
              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <Card className="w-full max-w-lg bg-card border border-border">
