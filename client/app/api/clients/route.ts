@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       // Assuming the cursor returns an array of client objects
       return NextResponse.json(result.p_clients_cursor);
     } else {
-      return NextResponse.json({ error: "No clients found" }, { status: 404 });
+      return NextResponse.json([]);
     }
   } catch (error) {
     console.error("Error fetching clients:", error);

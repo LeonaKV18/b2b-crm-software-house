@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       // Assuming the cursor returns an array of proposal objects
       return NextResponse.json(result.p_proposals_cursor);
     } else {
-      return NextResponse.json({ error: "No proposals found" }, { status: 404 });
+      return NextResponse.json([]);
     }
   } catch (error) {
     console.error("Error fetching proposals:", error);

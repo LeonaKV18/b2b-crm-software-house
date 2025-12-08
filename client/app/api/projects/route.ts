@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       // Assuming the cursor returns an array of project objects
       return NextResponse.json(result.p_projects_cursor);
     } else {
-      return NextResponse.json({ error: "No projects found" }, { status: 404 });
+      return NextResponse.json([]);
     }
   } catch (error) {
     console.error("Error fetching projects:", error);

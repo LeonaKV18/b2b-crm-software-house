@@ -219,7 +219,7 @@ export default function MeetingsPage() {
                   >
                     <option value="">Select Project</option>
                     {projects.map((p) => (
-                        <option key={p.ID} value={p.ID}>{p.TITLE} ({p.CLIENT_NAME})</option>
+                        <option key={p.id} value={p.id}>{p.title} ({p.client_name})</option>
                     ))}
                   </select>
                   <Input 

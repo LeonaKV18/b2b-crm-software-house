@@ -7,8 +7,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const projectId = id;
 
-    if (!projectId) {
-      return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
+    if (!projectId || isNaN(Number(projectId))) {
+      return NextResponse.json({ error: "Invalid Project ID" }, { status: 400 });
     }
 
     const bindVars = {

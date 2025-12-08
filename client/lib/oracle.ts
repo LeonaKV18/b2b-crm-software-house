@@ -37,7 +37,7 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
       const lowercasedOutBinds: Record<string, any> = {};
       for (const key of Object.keys(result.outBinds)) {
         const boundValue = result.outBinds[key];
-        if (boundValue instanceof oracledb.ResultSet) {
+        if (boundValue && typeof boundValue.getRows === 'function' && typeof boundValue.close === 'function') {
           const resultSet = boundValue as oracledb.ResultSet<any>;
           const rows = await resultSet.getRows();
           await resultSet.close();

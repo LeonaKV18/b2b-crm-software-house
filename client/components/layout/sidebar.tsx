@@ -11,8 +11,6 @@ import {
   Briefcase, 
   Calendar, 
   LineChart, 
-  Settings, 
-  Zap, 
   CheckSquare, 
   ClipboardList, 
   CreditCard, 
@@ -28,7 +26,6 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
     { label: "Team", icon: <Users size={18} />, href: "/dashboard/admin/team" },
     { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/admin/meetings" },
     { label: "Reports", icon: <LineChart size={18} />, href: "/dashboard/admin/reports" },
-    { label: "Settings", icon: <Settings size={18} />, href: "/dashboard/admin/settings" },
   ],
   pm: [
     { label: "Dashboard", icon: <LayoutDashboard size={18} />, href: "/dashboard/pm" },
@@ -95,15 +92,6 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
         </div>
 
         <div className="flex gap-2">
-          <Link href="/dashboard/settings" className="flex-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/80"
-            >
-              <Settings size={16} />
-            </Button>
-          </Link>
           <div className="relative flex-1">
             <Button
               variant="outline"
