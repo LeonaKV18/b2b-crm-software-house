@@ -1,0 +1,22 @@
+flowchart TD
+    Start([Login]) --> Auth{Authenticated?}
+    Auth -- No --> Start
+    Auth -- Yes --> Dashboard[Developer Dashboard]
+
+    Dashboard --> Projects[View Projects]
+    Projects --> MyProjects[View Assigned Projects]
+    Projects --> ProjectDetails[View Project Details]
+
+    Dashboard --> Tasks[Manage Tasks]
+    Tasks --> ViewTasks[View Assigned Tasks]
+    Tasks --> UpdateStatus[Update Task Status]
+    UpdateStatus --> Todo[Todo]
+    UpdateStatus --> InProgress[In Progress]
+    UpdateStatus --> Done[Done]
+    Tasks --> LockTask[Lock Task]
+
+    Dashboard --> Milestones[View Milestones]
+    Milestones --> CheckDeadlines[Check Deadlines]
+
+    Dashboard --> Meetings[View Meetings]
+    Meetings --> CheckSchedule[Check Meeting Schedule]

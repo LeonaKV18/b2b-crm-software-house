@@ -1,0 +1,105 @@
+erDiagram
+    users ||--o{ clients : "manages"
+    users ||--o{ contacts : "has"
+    users ||--o{ proposals : "manages as PM"
+    users ||--o{ tasks : "locks"
+    users ||--o{ meeting_participants : "attends"
+
+    clients ||--o{ contacts : "has"
+    clients ||--o{ proposals : "submits"
+    clients ||--o{ invoices : "receives"
+
+    proposals ||--o{ tasks : "has"
+    proposals ||--o{ meetings : "schedules"
+    proposals ||--o{ invoices : "generates"
+
+    tasks ||--o{ tasks : "has subtask"
+
+    meetings ||--o{ meeting_participants : "has"
+
+    users {
+        number user_id PK
+        varchar role "admin,pm,client,developer"
+        varchar email
+        varchar name
+        varchar password
+        number is_active "0 or 1"
+    }
+
+    clients {
+        number client_id PK
+        number user_id FK "client is also a user"
+        varchar company_name
+        varchar industry
+        varchar timezone
+    }
+
+    contacts {
+        number contact_id PK
+        number user_id FK "owner of contact"
+        number client_id FK "optional: if additional client contact"
+        varchar full_name
+        varchar email
+        varchar phone
+        varchar contact_type "primary,secondary,tertiary - only for client contacts"
+    }
+
+    proposals {
+        number proposal_id PK
+        number client_id FK
+        number pm_user_id FK "assigned PM"
+        varchar title
+        clob description
+        number estimated_hours
+        number actual_hours
+        number value
+        varchar status "draft,submitted,approved,rejected,active,completed"
+        clob admin_comments
+        number srs_approved "0 or 1"
+        timestamp created_at
+        date expected_close
+        date actual_close
+        clob functional_requirements
+        clob non_functional_requirements
+        clob client_comments
+    }
+
+    tasks {
+        number task_id PK
+        number proposal_id FK "belongs to proposal"
+        number parent_task_id FK "self-referencing for subtasks"
+        number locked_by FK "user working on it"
+        varchar title
+        clob description
+        varchar status "todo,in_progress,done"
+        date due_date
+        date completed_date
+        varchar priority "Low, Medium, High"
+    }
+
+    meetings {
+        number meeting_id PK
+        number proposal_id FK
+        varchar meeting_type "No fixed enum, typically: scrum, sprint_planning, etc."
+        date scheduled_date
+        varchar subject
+        clob minutes_of_meeting
+        varchar status "scheduled,completed,cancelled"
+    }
+
+    meeting_participants {
+        number participant_id PK
+        number meeting_id FK
+        number user_id FK
+        varchar attendance "invited,attended,absent"
+    }
+
+    invoices {
+        number invoice_id PK
+        number client_id FK
+        number proposal_id FK
+        number amount
+        date issue_date
+        date due_date
+        varchar status "pending,paid,overdue,cancelled"
+    }

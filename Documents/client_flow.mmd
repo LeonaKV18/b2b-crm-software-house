@@ -1,0 +1,25 @@
+flowchart TD
+    Start([Login]) --> Auth{Authenticated?}
+    Auth -- No --> Start
+    Auth -- Yes --> Dashboard[Client Dashboard]
+
+    Dashboard --> Proposals[Manage Proposals]
+    Proposals --> CreateProposal[Create New Proposal]
+    Proposals --> ViewStatus[View Proposal Status]
+    Proposals --> Rework[Request Rework]
+    Proposals --> Approve[Approve Proposal]
+
+    Dashboard --> Projects[View Projects]
+    Projects --> MonitorProgress[Monitor Project Progress]
+    Projects --> ViewMilestones[View Milestones]
+
+    Dashboard --> Invoices[Manage Invoices]
+    Invoices --> ViewInvoices[View Pending/Paid Invoices]
+    Invoices --> PayInvoice[Pay Invoice]
+
+    Dashboard --> Meetings[Manage Meetings]
+    Meetings --> RequestMeeting[Request Meeting]
+    Meetings --> ViewSchedule[View Scheduled Meetings]
+
+    Dashboard --> Stats[View Stats]
+    Stats --> DashboardStats[View Dashboard Metrics]

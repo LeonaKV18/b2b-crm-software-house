@@ -1,0 +1,30 @@
+flowchart TD
+    Start([Login]) --> Auth{Authenticated?}
+    Auth -- No --> Start
+    Auth -- Yes --> Dashboard[Admin Dashboard]
+
+    Dashboard --> Users[Manage Users]
+    Users --> AddUser[Add User]
+    Users --> EditUser[Edit User]
+    Users --> DeactivateUser[Deactivate User]
+    Users --> AssignRole[Assign Role: PM, Dev, Client]
+
+    Dashboard --> Clients[Manage Clients]
+    Clients --> ViewClients[View All Clients]
+    Clients --> ClientDetails[View Client Details]
+
+    Dashboard --> Projects[Oversee Projects]
+    Projects --> ViewAllProjects[View All Projects]
+    Projects --> ProjectStatus[Check Project Status]
+
+    Dashboard --> Proposals[Oversee Proposals]
+    Proposals --> ViewAllProposals[View All Proposals]
+    Proposals --> AssignPM[Assign PM to Proposal]
+
+    Dashboard --> Reports[View Reports]
+    Reports --> RevData[Revenue Data]
+    Reports --> ConvData[Conversion Metrics]
+    Reports --> Summary[Summary Metrics]
+
+    Dashboard --> Settings[Settings]
+    Settings --> SysConfig[System Configuration]

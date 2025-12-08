@@ -1,0 +1,26 @@
+flowchart TD
+    Start([Login]) --> Auth{Authenticated?}
+    Auth -- No --> Start
+    Auth -- Yes --> Dashboard[PM Dashboard]
+
+    Dashboard --> Proposals[Manage Proposals]
+    Proposals --> ReviewProposal[Review Proposal]
+    Proposals --> ApproveProposal[Approve SRS]
+    Proposals --> RejectProposal[Reject Proposal]
+
+    Dashboard --> Projects[Manage Projects]
+    Projects --> ViewProjects[View Assigned Projects]
+    Projects --> CreateMilestones[Create/Manage Milestones]
+    Projects --> AssignTasks[Assign Tasks to Developers]
+    
+    Dashboard --> Team[Manage Team]
+    Team --> ViewDevs[View Developers]
+    Team --> AssignDev[Assign Developer to Project]
+
+    Dashboard --> Meetings[Manage Meetings]
+    Meetings --> ScheduleMeeting[Schedule Meeting]
+    Meetings --> LogMinutes[Log Minutes of Meeting]
+    Meetings --> ViewMeetings[View Upcoming Meetings]
+
+    Dashboard --> Reports[View Reports]
+    Reports --> ProjectProgress[Project Progress Stats]
