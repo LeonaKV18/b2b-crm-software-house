@@ -559,12 +559,20 @@ BEGIN
             u.role AS role
         FROM
             users u
-        JOIN
-            team_members tm ON u.user_id = tm.user_id
-        JOIN
-            tasks t ON tm.team_id = t.team_id
         WHERE
-            t.proposal_id = p_project_id;
+            u.user_id IN (
+                SELECT tm.user_id
+                FROM team_members tm
+                JOIN tasks t ON tm.team_id = t.team_id
+                WHERE t.proposal_id = p_project_id
+            )
+            OR
+            u.user_id IN (
+                SELECT t.locked_by
+                FROM tasks t
+                WHERE t.proposal_id = p_project_id
+                AND t.locked_by IS NOT NULL
+            );
 END;
 /
 

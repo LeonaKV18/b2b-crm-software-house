@@ -14,9 +14,9 @@ export async function GET(req: NextRequest) {
 
     if (result && result.p_developers_cursor) {
       const developers = result.p_developers_cursor.map((d: any) => ({
-        id: d.ID,
-        name: d.NAME,
-        email: d.EMAIL,
+        id: d.id,
+        name: d.name,
+        email: d.email,
       }));
       return NextResponse.json(developers);
     } else {

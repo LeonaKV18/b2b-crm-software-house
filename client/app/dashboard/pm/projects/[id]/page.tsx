@@ -1,13 +1,15 @@
 "use client"
 
 import { useAuth } from "@/lib/auth-context"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState, useEffect } from "react" // Import useEffect
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Plus } from "lucide-react"
 import Link from "next/link"
 
@@ -43,12 +45,11 @@ interface Developer {
   email: string;
 }
 
-export default function PMProjectDetailsPage() {
-  const params = useParams()
-  const id = params?.id as string
+export default function PMProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
-  const [currentPath] = useState(`/dashboard/pm/projects`) // Generalize path for sidebar
+  const [projectId, setProjectId] = useState<string>("")
+  const [currentPath, setCurrentPath] = useState("")
 
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -60,14 +61,46 @@ export default function PMProjectDetailsPage() {
   const [availableDevelopers, setAvailableDevelopers] = useState<Developer[]>([])
   const [selectedDeveloper, setSelectedDeveloper] = useState<string>("")
 
-  // Milestone Dialog State
   const [showAddMilestoneDialog, setShowAddMilestoneDialog] = useState(false)
-  const [newMilestone, setNewMilestone] = useState({
-    title: "",
-    description: "",
-    dueDate: "",
-    priority: "Medium"
-  })
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState("")
+  const [newMilestoneDescription, setNewMilestoneDescription] = useState("")
+  const [newMilestoneDueDate, setNewMilestoneDueDate] = useState("")
+  const [newMilestonePriority, setNewMilestonePriority] = useState("Medium")
+
+  useEffect(() => {
+    params.then((unwrappedParams) => {
+        setProjectId(unwrappedParams.id);
+        setCurrentPath(`/dashboard/pm/projects/${unwrappedParams.id}`);
+    });
+  }, [params]);
+
+  const fetchProjectData = async (id: string) => {
+    try {
+      setLoading(true)
+      const [projectRes, teamRes, milestonesRes] = await Promise.all([
+        fetch(`/api/project-details/${id}`),
+        fetch(`/api/project-team/${id}`),
+        fetch(`/api/project-milestones/${id}`),
+      ])
+
+      if (!projectRes.ok) throw new Error(`HTTP error! Project details: ${projectRes.status}`)
+      if (!teamRes.ok) throw new Error(`HTTP error! Team members: ${teamRes.status}`)
+      if (!milestonesRes.ok) throw new Error(`HTTP error! Milestones: ${milestonesRes.status}`)
+
+      const projectData = await projectRes.json()
+      const teamData = await teamRes.json()
+      const milestonesData = await milestonesRes.json()
+
+      setProjectDetails(projectData)
+      setTeamMembers(teamData)
+      setMilestones(milestonesData)
+    } catch (err) {
+      console.error("Failed to fetch project data:", err)
+      setError("Failed to load project details.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "pm") {
@@ -75,38 +108,10 @@ export default function PMProjectDetailsPage() {
       return
     }
 
-    if (!id) return;
-
-    const fetchProjectData = async () => {
-      try {
-        setLoading(true)
-        const [projectRes, teamRes, milestonesRes] = await Promise.all([
-          fetch(`/api/project-details/${id}`),
-          fetch(`/api/project-team/${id}`),
-          fetch(`/api/project-milestones/${id}`),
-        ])
-
-        if (!projectRes.ok) throw new Error(`HTTP error! Project details: ${projectRes.status}`)
-        if (!teamRes.ok) throw new Error(`HTTP error! Team members: ${teamRes.status}`)
-        if (!milestonesRes.ok) throw new Error(`HTTP error! Milestones: ${milestonesRes.status}`)
-
-        const projectData = await projectRes.json()
-        const teamData = await teamRes.json()
-        const milestonesData = await milestonesRes.json()
-
-        setProjectDetails(projectData)
-        setTeamMembers(teamData)
-        setMilestones(milestonesData)
-      } catch (err) {
-        console.error("Failed to fetch project data:", err)
-        setError("Failed to load project details.")
-      } finally {
-        setLoading(false)
-      }
+    if (projectId) {
+        fetchProjectData(projectId)
     }
-
-    fetchProjectData()
-  }, [isLoggedIn, user?.role, router, id])
+  }, [isLoggedIn, user?.role, router, projectId])
 
   useEffect(() => {
     if (showAssignDeveloperDialog) {
@@ -120,7 +125,6 @@ export default function PMProjectDetailsPage() {
           setAvailableDevelopers(data)
         } catch (err) {
           console.error("Error fetching developers:", err)
-          // Handle error, maybe set an error state for the dialog
         }
       }
       fetchDevelopers()
@@ -128,21 +132,21 @@ export default function PMProjectDetailsPage() {
   }, [showAssignDeveloperDialog])
 
   const handleAssignDeveloper = async () => {
-    if (!selectedDeveloper || !projectDetails?.id) return
+    if (!selectedDeveloper || !projectId) return
 
     try {
-      const res = await fetch(`/api/projects/${projectDetails.id}/assign-developer`, {
+      const res = await fetch(`/api/projects/${projectId}/assign-developer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ developerId: selectedDeveloper })
       })
 
       if (res.ok) {
-        alert("Developer assigned successfully to unassigned tasks.")
+        alert("Developer assigned successfully.")
         setShowAssignDeveloperDialog(false)
         setSelectedDeveloper("")
-        // Re-fetch project team members to update the list
-        const teamRes = await fetch(`/api/project-team/${params.id}`)
+        // Refresh team members
+        const teamRes = await fetch(`/api/project-team/${projectId}`)
         if (teamRes.ok) {
           const teamData = await teamRes.json()
           setTeamMembers(teamData)
@@ -157,48 +161,53 @@ export default function PMProjectDetailsPage() {
   }
 
   const handleAddMilestone = async () => {
-      if (!projectDetails?.id) return
-      try {
-          const res = await fetch("/api/tasks/create", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  proposalId: projectDetails.id,
-                  title: newMilestone.title,
-                  description: newMilestone.description,
-                  dueDate: newMilestone.dueDate,
-                  priority: newMilestone.priority
-              })
-          })
+    if (!newMilestoneTitle || !newMilestoneDueDate || !projectId) {
+        alert("Please fill in all required fields.");
+        return;
+    }
 
-          if (res.ok) {
-              alert("Milestone added successfully")
-              setShowAddMilestoneDialog(false)
-              setNewMilestone({ title: "", description: "", dueDate: "", priority: "Medium" })
-              // Refresh milestones
-              const milestonesRes = await fetch(`/api/project-milestones/${id}`)
-              if (milestonesRes.ok) {
-                  const milestonesData = await milestonesRes.json()
-                  setMilestones(milestonesData)
-              }
-          } else {
-              alert("Failed to add milestone")
-          }
-      } catch (err) {
-          console.error("Error adding milestone:", err)
-          alert("Error adding milestone")
-      }
+    try {
+        const res = await fetch("/api/milestones/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                projectId: projectId,
+                title: newMilestoneTitle,
+                description: newMilestoneDescription,
+                dueDate: newMilestoneDueDate,
+                priority: newMilestonePriority
+            })
+        });
+
+        if (res.ok) {
+            setShowAddMilestoneDialog(false);
+            setNewMilestoneTitle("");
+            setNewMilestoneDescription("");
+            setNewMilestoneDueDate("");
+            setNewMilestonePriority("Medium");
+            // Refresh milestones
+            const milestonesRes = await fetch(`/api/project-milestones/${projectId}`);
+            if (milestonesRes.ok) {
+                const milestonesData = await milestonesRes.json();
+                setMilestones(milestonesData);
+            }
+        } else {
+            alert("Failed to create milestone.");
+        }
+    } catch (err) {
+        console.error("Error creating milestone:", err);
+        alert("Error creating milestone.");
+    }
   }
-
 
   if (!isLoggedIn || user?.role !== "pm") {
     return null
   }
 
   const getProjectStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "active":
-      case "in progress": // Map 'in_progress' to 'In Progress' for display
+      case "in progress":
         return "bg-primary/20 text-primary";
       case "completed":
         return "bg-chart-3/20 text-chart-3";
@@ -216,7 +225,7 @@ export default function PMProjectDetailsPage() {
   };
 
   const getMilestoneStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case "done":
         return "bg-chart-3/20 text-chart-3";
       case "in_progress":
@@ -228,7 +237,6 @@ export default function PMProjectDetailsPage() {
     }
   };
 
-
   if (loading) {
     return (
       <div className="flex h-screen bg-background items-center justify-center">
@@ -237,23 +245,15 @@ export default function PMProjectDetailsPage() {
     )
   }
 
-  if (error) {
+  if (error || !projectDetails) {
     return (
       <div className="flex h-screen bg-background items-center justify-center">
-        <p className="text-destructive">{error}</p>
+        <p className="text-destructive">{error || "Project not found"}</p>
       </div>
     )
   }
 
-  if (!projectDetails) {
-    return (
-      <div className="flex h-screen bg-background items-center justify-center">
-        <p className="text-muted-foreground">Project not found.</p>
-      </div>
-    )
-  }
-
-  const project = projectDetails; // Use fetched data
+  const project = projectDetails;
 
   return (
     <div className="flex h-screen bg-background">
@@ -267,11 +267,13 @@ export default function PMProjectDetailsPage() {
               <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
               <p className="text-sm text-muted-foreground">{project.client}</p>
             </div>
-            <Link href="/dashboard/pm/projects">
-              <Button variant="outline" className="bg-secondary border-border">
-                ← Back to Projects
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+                <Link href="/dashboard/pm/projects">
+                    <Button variant="outline" className="bg-secondary border-border">
+                        ← Back to Projects
+                    </Button>
+                </Link>
+            </div>
           </div>
         </div>
 
@@ -363,41 +365,10 @@ export default function PMProjectDetailsPage() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-foreground">Assigned Team</CardTitle>
-                  <Dialog open={showAssignDeveloperDialog} onOpenChange={setShowAssignDeveloperDialog}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="bg-primary hover:bg-primary/90 flex items-center gap-1">
-                        <Plus size={16} />
-                        Assign Developer
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Assign Developer to Project Tasks</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">This will assign the selected developer to all currently unassigned tasks within this project.</p>
-                        <Select onValueChange={setSelectedDeveloper} value={selectedDeveloper}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a developer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableDevelopers.map((dev) => (
-                              <SelectItem key={dev.id} value={String(dev.id)}>
-                                {dev.name} ({dev.email})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button 
-                          onClick={handleAssignDeveloper} 
-                          disabled={!selectedDeveloper}
-                          className="w-full"
-                        >
-                          Assign Developer
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button size="sm" onClick={() => setShowAssignDeveloperDialog(true)}>
+                    <Plus size={16} className="mr-2" />
+                    Assign Developer
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -426,55 +397,10 @@ export default function PMProjectDetailsPage() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-foreground">Milestones</CardTitle>
-                  <Dialog open={showAddMilestoneDialog} onOpenChange={setShowAddMilestoneDialog}>
-                      <DialogTrigger asChild>
-                          <Button size="sm" className="bg-primary hover:bg-primary/90 flex items-center gap-1">
-                              <Plus size={16} />
-                              Add
-                          </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                          <DialogHeader>
-                              <DialogTitle>Add New Milestone</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                              <input 
-                                  placeholder="Milestone Title" 
-                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
-                                  value={newMilestone.title}
-                                  onChange={(e) => setNewMilestone({...newMilestone, title: e.target.value})}
-                              />
-                              <textarea 
-                                  placeholder="Description" 
-                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
-                                  value={newMilestone.description}
-                                  onChange={(e) => setNewMilestone({...newMilestone, description: e.target.value})}
-                              />
-                              <input 
-                                  type="date"
-                                  className="w-full px-3 py-2 bg-secondary border border-border rounded-md text-foreground"
-                                  value={newMilestone.dueDate}
-                                  onChange={(e) => setNewMilestone({...newMilestone, dueDate: e.target.value})}
-                              />
-                              <Select 
-                                  onValueChange={(val) => setNewMilestone({...newMilestone, priority: val})} 
-                                  value={newMilestone.priority}
-                              >
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Priority" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="Low">Low</SelectItem>
-                                      <SelectItem value="Medium">Medium</SelectItem>
-                                      <SelectItem value="High">High</SelectItem>
-                                  </SelectContent>
-                              </Select>
-                              <Button onClick={handleAddMilestone} className="w-full">
-                                  Add Milestone
-                              </Button>
-                          </div>
-                      </DialogContent>
-                  </Dialog>
+                  <Button size="sm" onClick={() => setShowAddMilestoneDialog(true)}>
+                    <Plus size={16} className="mr-2" />
+                    Add Milestone
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -501,6 +427,85 @@ export default function PMProjectDetailsPage() {
             </Card>
           </div>
         </div>
+
+        {/* Dialogs */}
+        <Dialog open={showAssignDeveloperDialog} onOpenChange={setShowAssignDeveloperDialog}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Assign Developer</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <p className="text-sm text-muted-foreground">Select a developer to assign to this project's unassigned tasks.</p>
+                    <Select value={selectedDeveloper} onValueChange={setSelectedDeveloper}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select Developer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableDevelopers.map((dev) => (
+                                <SelectItem key={dev.id} value={dev.id.toString()}>
+                                    {dev.name} ({dev.email})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAssignDeveloperDialog(false)}>Cancel</Button>
+                    <Button onClick={handleAssignDeveloper} disabled={!selectedDeveloper}>Assign</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog open={showAddMilestoneDialog} onOpenChange={setShowAddMilestoneDialog}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Add Milestone</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Title</label>
+                        <Input 
+                            placeholder="Milestone Title" 
+                            value={newMilestoneTitle}
+                            onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Description</label>
+                        <Textarea 
+                            placeholder="Description" 
+                            value={newMilestoneDescription}
+                            onChange={(e) => setNewMilestoneDescription(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Due Date</label>
+                        <Input 
+                            type="date"
+                            value={newMilestoneDueDate}
+                            onChange={(e) => setNewMilestoneDueDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Priority</label>
+                        <Select value={newMilestonePriority} onValueChange={setNewMilestonePriority}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select Priority" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Low">Low</SelectItem>
+                                <SelectItem value="Medium">Medium</SelectItem>
+                                <SelectItem value="High">High</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAddMilestoneDialog(false)}>Cancel</Button>
+                    <Button onClick={handleAddMilestone}>Create Milestone</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
