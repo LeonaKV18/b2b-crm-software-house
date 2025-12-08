@@ -117,7 +117,9 @@ export default function ClientProjectsPage() {
                     <p className="text-sm text-muted-foreground">Due: {project.deadline}</p>
                   </div>
 
-                  <Button className="w-full bg-primary hover:bg-primary/90">View Details</Button>
+                  <Link href={`/dashboard/client/projects/${project.id}`} className="w-full block">
+                    <Button className="w-full bg-primary hover:bg-primary/90">View Details</Button>
+                  </Link>
                 </CardContent>
               </Card>
             ))}
