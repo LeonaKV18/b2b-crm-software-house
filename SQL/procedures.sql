@@ -368,7 +368,10 @@ CREATE OR REPLACE PROCEDURE get_pm_dashboard_stats (
     p_active_projects_count OUT NUMBER,
     p_delayed_projects_count OUT NUMBER,
     p_on_schedule_projects_count OUT NUMBER,
-    p_team_utilization OUT NUMBER
+    p_team_utilization OUT NUMBER,
+    p_completed_projects_count OUT NUMBER,
+    p_milestones_on_time OUT NUMBER,
+    p_milestones_delayed OUT NUMBER
 )
 AS
 BEGIN
