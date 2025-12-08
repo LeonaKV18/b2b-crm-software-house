@@ -18,6 +18,7 @@ interface Meeting {
   attendees: number;
   type: string;
   location: string;
+  mom?: string;
 }
 
 export default function MeetingsPage() {
@@ -25,10 +26,25 @@ export default function MeetingsPage() {
   const router = useRouter()
   const [currentPath] = useState("/dashboard/admin/meetings")
   const [showForm, setShowForm] = useState(false)
+  const [showMomDialog, setShowMomDialog] = useState(false)
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [momText, setMomText] = useState("")
 
   const [meetings, setMeetings] = useState<Meeting[]>([])
+  const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Form State
+  const [formData, setFormData] = useState({
+    title: "",
+    date: "",
+    time: "",
+    type: "",
+    proposalId: "",
+    includeClient: false,
+    location: ""
+  })
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
@@ -36,25 +52,105 @@ export default function MeetingsPage() {
       return
     }
 
-    const fetchMeetings = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await fetch("/api/meetings")
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+        const [meetingsRes, projectsRes] = await Promise.all([
+          fetch("/api/meetings"),
+          fetch("/api/admin/meetings/projects")
+        ])
+
+        if (!meetingsRes.ok || !projectsRes.ok) {
+          throw new Error("Failed to fetch data")
         }
-        const data = await response.json()
-        setMeetings(data)
+
+        const meetingsData = await meetingsRes.json()
+        const projectsData = await projectsRes.json()
+
+        setMeetings(meetingsData)
+        setProjects(projectsData)
       } catch (err) {
         console.error("Failed to fetch meetings:", err)
-        setError("Failed to load meetings.")
+        setError("Failed to load data.")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchMeetings()
+    fetchData()
   }, [isLoggedIn, user?.role, router])
+
+  const handleSchedule = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      const res = await fetch("/api/meetings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          userId: user?.id,
+          subject: formData.title + (formData.location ? ` - ${formData.location}` : "")
+        })
+      })
+
+      if (res.ok) {
+        setShowForm(false)
+        setFormData({
+            title: "",
+            date: "",
+            time: "",
+            type: "",
+            proposalId: "",
+            includeClient: false,
+            location: ""
+        })
+        // Refresh meetings
+        const meetingsRes = await fetch("/api/meetings")
+        const meetingsData = await meetingsRes.json()
+        setMeetings(meetingsData)
+      } else {
+        alert("Failed to schedule meeting")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Error scheduling meeting")
+    }
+  }
+
+  const handleSaveMom = async () => {
+    if (!selectedMeeting) return
+    try {
+      const res = await fetch("/api/meetings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingId: selectedMeeting.id,
+          mom: momText
+        })
+      })
+
+      if (res.ok) {
+        setShowMomDialog(false)
+        setSelectedMeeting(null)
+        setMomText("")
+        // Refresh meetings
+        const meetingsRes = await fetch("/api/meetings")
+        const meetingsData = await meetingsRes.json()
+        setMeetings(meetingsData)
+      } else {
+        alert("Failed to save MoM")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Error saving MoM")
+    }
+  }
+
+  const openMomDialog = (meeting: Meeting) => {
+    setSelectedMeeting(meeting)
+    setMomText(meeting.mom || "")
+    setShowMomDialog(true)
+  }
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
@@ -107,17 +203,68 @@ export default function MeetingsPage() {
                 <CardTitle className="text-foreground">Schedule New Meeting</CardTitle>
               </CardHeader>
               <CardContent>
-                <form className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input placeholder="Meeting Title" className="bg-secondary border-border" />
-                  <Input type="date" className="bg-secondary border-border" />
-                  <Input type="time" className="bg-secondary border-border" />
-                  <select className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground">
-                    <option>Meeting Type</option>
-                    <option>Client Meeting</option>
-                    <option>Internal</option>
-                    <option>Project Review</option>
+                <form onSubmit={handleSchedule} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input 
+                    placeholder="Meeting Title" 
+                    className="bg-secondary border-border" 
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    required
+                  />
+                  <select 
+                    className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground"
+                    value={formData.proposalId}
+                    onChange={(e) => setFormData({...formData, proposalId: e.target.value})}
+                    required
+                  >
+                    <option value="">Select Project</option>
+                    {projects.map((p) => (
+                        <option key={p.ID} value={p.ID}>{p.TITLE} ({p.CLIENT_NAME})</option>
+                    ))}
                   </select>
-                  <Input placeholder="Location / Meeting Link" className="bg-secondary border-border md:col-span-2" />
+                  <Input 
+                    type="date" 
+                    className="bg-secondary border-border" 
+                    value={formData.date}
+                    onChange={(e) => setFormData({...formData, date: e.target.value})}
+                    required
+                  />
+                  <Input 
+                    type="time" 
+                    className="bg-secondary border-border" 
+                    value={formData.time}
+                    onChange={(e) => setFormData({...formData, time: e.target.value})}
+                    required
+                  />
+                  <select 
+                    className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground"
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                    required
+                  >
+                    <option value="">Meeting Type</option>
+                    <option value="scrum">Scrum</option>
+                    <option value="sprint_planning">Sprint Planning</option>
+                    <option value="sprint_review">Sprint Review</option>
+                    <option value="sprint_retrospective">Sprint Retrospective</option>
+                    <option value="srs">SRS</option>
+                    <option value="kickoff">Kickoff</option>
+                  </select>
+                  <div className="flex items-center gap-2">
+                    <input 
+                        type="checkbox" 
+                        id="includeClient"
+                        checked={formData.includeClient}
+                        onChange={(e) => setFormData({...formData, includeClient: e.target.checked})}
+                    />
+                    <label htmlFor="includeClient" className="text-foreground">Include Client?</label>
+                  </div>
+                  <Input 
+                    placeholder="Location / Meeting Link" 
+                    className="bg-secondary border-border md:col-span-2" 
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
                   <div className="md:col-span-2 flex gap-2">
                     <Button type="submit" className="bg-primary hover:bg-primary/90">
                       Schedule
@@ -134,6 +281,29 @@ export default function MeetingsPage() {
                 </form>
               </CardContent>
             </Card>
+          )}
+
+          {/* MoM Dialog */}
+          {showMomDialog && selectedMeeting && (
+             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <Card className="w-full max-w-lg bg-card border border-border">
+                    <CardHeader>
+                        <CardTitle className="text-foreground">Minutes of Meeting - {selectedMeeting.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <textarea
+                            className="w-full h-40 p-2 bg-secondary border border-border rounded-md text-foreground"
+                            placeholder="Enter minutes of meeting..."
+                            value={momText}
+                            onChange={(e) => setMomText(e.target.value)}
+                        />
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button variant="outline" onClick={() => setShowMomDialog(false)}>Cancel</Button>
+                            <Button onClick={handleSaveMom}>Save</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+             </div>
           )}
 
           {/* Upcoming Meetings */}
@@ -160,13 +330,23 @@ export default function MeetingsPage() {
                           {meeting.attendees} attendees
                         </div>
                       </div>
+                      {meeting.mom && (
+                          <div className="mt-4 p-2 bg-secondary/50 rounded text-sm text-muted-foreground">
+                              <strong>MoM:</strong> {meeting.mom.substring(0, 100)}...
+                          </div>
+                      )}
                     </div>
 
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
                         Join
                       </Button>
-                      <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="bg-secondary border-border hover:bg-secondary/80"
+                        onClick={() => openMomDialog(meeting)}
+                      >
                         MoM
                       </Button>
                     </div>

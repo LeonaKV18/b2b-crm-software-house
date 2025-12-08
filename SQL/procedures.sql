@@ -102,13 +102,15 @@ BEGIN
         SELECT
             m.meeting_id AS id,
             m.subject AS title,
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date,
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS time,
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date_str,
+            TO_CHAR(m.scheduled_date, 'HH24:MI') AS time_str,
             (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS attendees,
             m.meeting_type AS type,
-            m.subject AS location -- Using subject as location for now
+            m.subject AS location,
+            m.minutes_of_meeting AS mom
         FROM
-            meetings m;
+            meetings m
+        ORDER BY m.scheduled_date DESC;
 END;
 /
 
@@ -922,3 +924,105 @@ EXCEPTION
         ROLLBACK;
 END;
 /
+
+-- Procedure to get projects for scheduling meetings (Admin view)
+CREATE OR REPLACE PROCEDURE get_projects_for_scheduling (
+    p_projects_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_projects_cursor FOR
+        SELECT
+            p.proposal_id AS id,
+            p.title AS title,
+            c.company_name AS client_name,
+            u.name AS pm_name
+        FROM
+            proposals p
+        JOIN
+            clients c ON p.client_id = c.client_id
+        LEFT JOIN
+            users u ON p.pm_user_id = u.user_id
+        WHERE
+            p.status IN ('active', 'in_progress', 'approved');
+END;
+/
+
+-- Procedure to create a meeting and assign participants
+CREATE OR REPLACE PROCEDURE create_meeting_custom (
+    p_proposal_id IN NUMBER,
+    p_creator_id IN NUMBER, -- Admin's user_id
+    p_subject IN VARCHAR2,
+    p_scheduled_date IN DATE,
+    p_meeting_type IN VARCHAR2,
+    p_include_client IN NUMBER, -- 1 to include, 0 to exclude
+    p_meeting_id OUT NUMBER
+)
+AS
+    v_pm_user_id NUMBER;
+    v_client_user_id NUMBER;
+    v_client_id NUMBER;
+BEGIN
+    -- 1. Create Meeting
+    INSERT INTO meetings (proposal_id, subject, scheduled_date, meeting_type, status)
+    VALUES (p_proposal_id, p_subject, p_scheduled_date, p_meeting_type, 'scheduled')
+    RETURNING meeting_id INTO p_meeting_id;
+
+    -- 2. Add Admin (Creator) as participant
+    INSERT INTO meeting_participants (meeting_id, user_id, attendance)
+    VALUES (p_meeting_id, p_creator_id, 'invited');
+
+    -- 3. Get PM and Client IDs
+    SELECT pm_user_id, client_id INTO v_pm_user_id, v_client_id
+    FROM proposals
+    WHERE proposal_id = p_proposal_id;
+
+    -- 4. Add PM if assigned
+    IF v_pm_user_id IS NOT NULL THEN
+        INSERT INTO meeting_participants (meeting_id, user_id, attendance)
+        VALUES (p_meeting_id, v_pm_user_id, 'invited');
+    END IF;
+
+    -- 5. Add Client if requested
+    IF p_include_client = 1 THEN
+        SELECT user_id INTO v_client_user_id
+        FROM clients
+        WHERE client_id = v_client_id;
+
+        IF v_client_user_id IS NOT NULL THEN
+            INSERT INTO meeting_participants (meeting_id, user_id, attendance)
+            VALUES (p_meeting_id, v_client_user_id, 'invited');
+        END IF;
+    END IF;
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+-- Procedure to update MoM
+CREATE OR REPLACE PROCEDURE update_meeting_mom (
+    p_meeting_id IN NUMBER,
+    p_mom IN CLOB,
+    p_success OUT NUMBER
+)
+AS
+BEGIN
+    UPDATE meetings
+    SET minutes_of_meeting = p_mom,
+        status = 'completed' -- Auto-mark as completed if MoM is added
+    WHERE meeting_id = p_meeting_id;
+
+    p_success := 1;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        p_success := 0;
+        ROLLBACK;
+END;
+/
+
+
