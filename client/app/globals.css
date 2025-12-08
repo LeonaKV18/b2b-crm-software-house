@@ -150,3 +150,13 @@
     @apply text-sm text-muted-foreground;
   }
 }
+
+/* Fix for date/time input icons in dark mode */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2) !important; /* Invert and brighten */
+  background-color: var(--background) !important; /* Ensure background of indicator is dark */
+  border-radius: 2px; /* Add some rounding if needed */
+  padding: 2px; /* Add some padding */
+  cursor: pointer;
+}

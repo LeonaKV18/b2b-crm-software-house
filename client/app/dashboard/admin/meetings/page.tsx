@@ -11,6 +11,22 @@ import Link from "next/link"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { useState, useEffect } from "react" // Import useEffect
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface Meeting {
   id: number;
@@ -217,78 +233,78 @@ export default function MeetingsPage() {
 
         {/* Main Content */}
         <div className="p-8">
-          {/* Schedule Form */}
-          {showForm && (
-            <Card className="bg-card border border-border mb-8">
-              <CardHeader>
-                <CardTitle className="text-foreground">Schedule New Meeting</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSchedule} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input 
-                    placeholder="Meeting Title" 
-                    className="bg-secondary border-border" 
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                  />
-                  <select 
-                    className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground"
-                    value={formData.proposalId}
-                    onChange={(e) => setFormData({...formData, proposalId: e.target.value})}
-                    required
-                  >
-                    <option value="">Select Project</option>
-                    {projects.map((p) => (
-                        <option key={p.id} value={p.id}>{p.title} ({p.client_name})</option>
-                    ))}
-                  </select>
-                  <Input 
-                    type="date" 
-                    className="bg-secondary border-border" 
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    required
-                  />
-                  <Input 
-                    type="time" 
-                    className="bg-secondary border-border" 
-                    value={formData.time}
-                    onChange={(e) => setFormData({...formData, time: e.target.value})}
-                    required
-                  />
-                  <div className="flex items-center gap-2">
-                    <input 
-                        type="checkbox" 
-                        id="includeClient"
-                        checked={formData.includeClient}
-                        onChange={(e) => setFormData({...formData, includeClient: e.target.checked})}
+          {/* Schedule Dialog */}
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Schedule New Meeting</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Meeting Title</Label>
+                    <Input 
+                      placeholder="Meeting Title" 
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
                     />
-                    <label htmlFor="includeClient" className="text-foreground">Include Client?</label>
                   </div>
-                  <Input 
-                    placeholder="Location / Meeting Link" 
-                    className="bg-secondary border-border md:col-span-2" 
-                    value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  />
-                  <div className="md:col-span-2 flex gap-2">
-                    <Button type="submit" className="bg-primary hover:bg-primary/90">
-                      Schedule
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowForm(false)}
-                      className="bg-secondary border-border"
+                  <div className="space-y-2">
+                    <Label>Project</Label>
+                    <Select 
+                      value={formData.proposalId}
+                      onValueChange={(val) => setFormData({...formData, proposalId: val})}
                     >
-                      Cancel
-                    </Button>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id.toString()}>{p.title} ({p.client_name})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Date</Label>
+                      <Input 
+                        type="date" 
+                        value={formData.date}
+                        onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Time</Label>
+                      <Input 
+                        type="time" 
+                        value={formData.time}
+                        onChange={(e) => setFormData({...formData, time: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 p-2 bg-secondary/30 rounded">
+                    <Checkbox 
+                        id="includeClient" 
+                        checked={formData.includeClient}
+                        onCheckedChange={(c) => setFormData({...formData, includeClient: c as boolean})}
+                    />
+                    <Label htmlFor="includeClient" className="cursor-pointer">Include Client?</Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Location / Link</Label>
+                    <Input 
+                      placeholder="Location / Meeting Link" 
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    />
+                  </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+                <Button onClick={handleSchedule as any}>Schedule</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* MoM Dialog */}
           {showMomDialog && selectedMeeting && (
