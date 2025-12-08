@@ -57,13 +57,15 @@ BEGIN
             p.title AS "name",
             c.company_name AS "client",
             50 AS "progress", -- Dummy data for now
-            p.expected_close AS "deadline",
+            TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS "deadline",
             (SELECT COUNT(DISTINCT tm.user_id) FROM team_members tm JOIN tasks t ON tm.team_id = t.team_id WHERE t.proposal_id = p.proposal_id) AS "team",
             p.status AS "status"
         FROM
             proposals p
         JOIN
-            clients c ON p.client_id = c.client_id;
+            clients c ON p.client_id = c.client_id
+        WHERE
+            p.status IN ('active', 'completed');
 END;
 /
 
@@ -827,9 +829,18 @@ CREATE OR REPLACE PROCEDURE approve_proposal (
     p_success OUT NUMBER
 )
 AS
+    v_pm_id NUMBER;
 BEGIN
+    -- Check if PM is assigned
+    SELECT pm_user_id INTO v_pm_id FROM proposals WHERE proposal_id = p_proposal_id;
+
+    IF v_pm_id IS NULL THEN
+        p_success := 0; -- Failed because no PM assigned
+        RETURN;
+    END IF;
+
     UPDATE proposals
-    SET status = 'approved',
+    SET status = 'active', -- Becomes a project
         admin_comments = p_comment
     WHERE proposal_id = p_proposal_id;
     

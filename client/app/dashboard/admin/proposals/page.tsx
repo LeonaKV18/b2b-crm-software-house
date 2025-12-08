@@ -33,10 +33,10 @@ interface Proposal {
   description: string;
   status: string;
   value: number;
-  createdBy: string;
+  createdby: string;
   date: string;
-  adminComments?: string;
-  pmId?: number;
+  admincomments?: string;
+  pmid?: number;
 }
 
 interface ProjectManager {
@@ -178,7 +178,9 @@ export default function ProposalsPage() {
     return null
   }
 
-  const filtered = proposals.filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filtered = proposals
+    .filter((p) => p.status !== 'active' && p.status !== 'completed')
+    .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
   const getStatusBadge = (status: string) => {
     const statusStyles: Record<string, string> = {
@@ -298,7 +300,7 @@ export default function ProposalsPage() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-foreground">
-                          {pms.find(pm => pm.id === proposal.pmId)?.name || <span className="text-muted-foreground italic">Unassigned</span>}
+                          {pms.find(pm => pm.id === proposal.pmid)?.name || <span className="text-muted-foreground italic">Unassigned</span>}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2">
@@ -313,8 +315,9 @@ export default function ProposalsPage() {
                             {/* Approve Button */}
                             <button 
                               onClick={() => { setSelectedProposal(proposal); setIsApproveOpen(true); }}
-                              className="p-1 hover:bg-chart-3/20 rounded transition-colors text-chart-3"
-                              title="Approve"
+                              disabled={!proposal.pmid}
+                              className={`p-1 rounded transition-colors ${!proposal.pmid ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-chart-3/20 text-chart-3'}`}
+                              title={!proposal.pmid ? "Assign a PM first to approve" : "Approve"}
                             >
                               <CheckCircle size={18} />
                             </button>
@@ -335,7 +338,7 @@ export default function ProposalsPage() {
                               <UserPlus size={18} />
                             </button>
                             {/* View Comments Button */}
-                            {proposal.adminComments && (
+                            {proposal.admincomments && (
                               <button 
                                 onClick={() => { setSelectedProposal(proposal); setIsCommentOpen(true); }}
                                 className="p-1 hover:bg-accent/20 rounded transition-colors text-accent"
@@ -385,7 +388,7 @@ export default function ProposalsPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Created By</h4>
-                    <p className="text-foreground">{selectedProposal?.createdBy || 'N/A'}</p>
+                    <p className="text-foreground">{selectedProposal?.createdby || 'N/A'}</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Value</h4>
@@ -403,7 +406,7 @@ export default function ProposalsPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Project Manager</h4>
-                    <p className="text-foreground">{pms.find(pm => pm.id === selectedProposal?.pmId)?.name || 'Unassigned'}</p>
+                    <p className="text-foreground">{pms.find(pm => pm.id === selectedProposal?.pmid)?.name || 'Unassigned'}</p>
                   </div>
                 </div>
                 <div>
@@ -412,11 +415,11 @@ export default function ProposalsPage() {
                     {selectedProposal?.description || "No description provided."}
                   </div>
                 </div>
-                {selectedProposal?.adminComments && (
+                {selectedProposal?.admincomments && (
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-2">Admin Comments</h4>
                     <div className="p-4 bg-accent/10 border border-accent/20 rounded-md text-sm">
-                      {selectedProposal.adminComments}
+                      {selectedProposal.admincomments}
                     </div>
                   </div>
                 )}
@@ -509,7 +512,7 @@ export default function ProposalsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="p-4 bg-secondary rounded-md text-sm">
-                {selectedProposal?.adminComments || "No comments."}
+                {selectedProposal?.admincomments || "No comments."}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCommentOpen(false)}>Close</Button>

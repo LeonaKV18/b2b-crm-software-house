@@ -1,62 +1,48 @@
 # Gemini Project Instructions
 
-You are assisting with a B2B CRM project. Follow these instructions precisely.
+You are assisting with a B2B CRM project. Your job is to fix frontend issues one at a time.
 
-## Tech Stack
-Next.js (App Router), React, TypeScript, Tailwind CSS, ShadCN UI, Oracle DB
+## How you should work
 
-## File Structure
-All backend logic is organized into 4 folders:
-- `triggers/` - Database triggers
-- `data/` - Data access layer
-- `procedures/` - Stored procedures
-- `tables/` - Table definitions
-- `functions/` - Database functions
+1. Read all project files inside this repository.
+2. Understand the component, API request, or page before making changes.
+3. When the developer selects a file to fix, propose the minimal required changes.
+4. Provide code diffs only — no entire file rewrites unless necessary.
+5. Follow the current project structure and naming conventions.
+6. When backend data is involved, assume Oracle SQL tables and procedures are already created. dont shy away from creating new triggers though
 
-**CRITICAL**: Always maintain existing file structure and naming conventions.
+## Technology Stack
 
-## Your Workflow (Follow in Order)
+- Next.js (App Router)
+- React
+- Tailwind CSS
+- TypeScript
+- Oracle DB (via backend API — already implemented)
+- ShadCN UI Components
 
-1. **Wait** for developer to identify the broken feature
-2. **Inspect** only the related files to the fix.
-3. **Trace** the issue path: UI Component → API Route → Backend Logic
-4. **Provide** minimal fix using the format below
+## Rules
 
-## Fix Response Format
+- Do not invent new endpoints unless necessary.
+- Only fix what is broken.
+- Respect current folder structure.
+- Keep all code clean, readable, and modular.
+- If a component is missing data, check /api/* routes first.
+- donot commit anything to github the user will verify manually then commit
 
-**File:** `path/to/file.tsx`  
-**Issue:** One-line description of what's broken  
-**Root Cause:** Why it's broken  
-**Fix:**
+## Task Process for Each Fix
+
+1. The developer tells you which button/page/feature is broken.
+2. You inspect the related file(s).
+3. You trace the issue logically (UI → API → SQL call).
+4. Provide a fix using this format:
+
+### Example Fix Format
+
+*File:* app/(dashboard)/clients/page.tsx
+
+*Issue:* Button does nothing when clicked.
+
+*Fix:*
 ```diff
-- old code line
-+ new code line
-```
-**Testing:** How to verify the fix works
-
-## Mandatory Rules
-
- **DO NOT:**
-- Refactor working code
-- Change file structure or naming conventions
-- Suggest commits or git operations
-- Fix issues not explicitly identified by developer
-- Add unnecessary dependencies or complexity
-
-**DO:**
-- Fix only what's broken
-- Check `/api/*` routes when data is missing
-- Follow existing patterns and conventions
-- Keep code clean, readable, and minimal
-- Wait for developer verification before proceeding
-
-## Error Handling Priority
-
-1. Check component props and state
-2. Verify API route exists and returns data
-3. Confirm backend procedure/function is called
-4. Validate database query syntax
-
----
-
-**Remember**: Less is more. Minimal changes, maximum clarity.
+- onClick={() => {}}
++ onClick={handleAddClient}
