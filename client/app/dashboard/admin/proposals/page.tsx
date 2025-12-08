@@ -33,10 +33,10 @@ interface Proposal {
   description: string;
   status: string;
   value: number;
-  createdby: string;
+  createdBy: string;
   date: string;
-  admincomments?: string;
-  pmid?: number;
+  adminComments?: string;
+  pmId?: number;
 }
 
 interface ProjectManager {
@@ -298,7 +298,7 @@ export default function ProposalsPage() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-sm text-foreground">
-                          {pms.find(pm => pm.id === proposal.pmid)?.name || <span className="text-muted-foreground italic">Unassigned</span>}
+                          {pms.find(pm => pm.id === proposal.pmId)?.name || <span className="text-muted-foreground italic">Unassigned</span>}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2">
@@ -335,7 +335,7 @@ export default function ProposalsPage() {
                               <UserPlus size={18} />
                             </button>
                             {/* View Comments Button */}
-                            {proposal.admincomments && (
+                            {proposal.adminComments && (
                               <button 
                                 onClick={() => { setSelectedProposal(proposal); setIsCommentOpen(true); }}
                                 className="p-1 hover:bg-accent/20 rounded transition-colors text-accent"
@@ -385,7 +385,7 @@ export default function ProposalsPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Created By</h4>
-                    <p className="text-foreground">{selectedProposal?.createdby || 'N/A'}</p>
+                    <p className="text-foreground">{selectedProposal?.createdBy || 'N/A'}</p>
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Value</h4>
@@ -403,7 +403,7 @@ export default function ProposalsPage() {
                   </div>
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground">Project Manager</h4>
-                    <p className="text-foreground">{pms.find(pm => pm.id === selectedProposal?.pmid)?.name || 'Unassigned'}</p>
+                    <p className="text-foreground">{pms.find(pm => pm.id === selectedProposal?.pmId)?.name || 'Unassigned'}</p>
                   </div>
                 </div>
                 <div>
@@ -412,11 +412,11 @@ export default function ProposalsPage() {
                     {selectedProposal?.description || "No description provided."}
                   </div>
                 </div>
-                {selectedProposal?.admincomments && (
+                {selectedProposal?.adminComments && (
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-2">Admin Comments</h4>
                     <div className="p-4 bg-accent/10 border border-accent/20 rounded-md text-sm">
-                      {selectedProposal.admincomments}
+                      {selectedProposal.adminComments}
                     </div>
                   </div>
                 )}
@@ -509,7 +509,7 @@ export default function ProposalsPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="p-4 bg-secondary rounded-md text-sm">
-                {selectedProposal?.admincomments || "No comments."}
+                {selectedProposal?.adminComments || "No comments."}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCommentOpen(false)}>Close</Button>

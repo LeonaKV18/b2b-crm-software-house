@@ -1,5 +1,8 @@
 import oracledb from 'oracledb';
 
+// Enable fetching CLOBs as strings
+oracledb.fetchAsString = [oracledb.CLOB];
+
 // Suppress Node.js's experimental warning for the fetch API
 process.removeAllListeners('warning');
 
