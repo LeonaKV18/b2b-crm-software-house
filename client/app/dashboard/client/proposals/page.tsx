@@ -19,10 +19,11 @@ interface Proposal {
   status: string;
   date: string;
   description: string;
-  expected_close: string;
-  functional_requirements: string;
-  non_functional_requirements: string;
-  client_comments: string;
+  expectedclose: string;
+  functionalreq: string;
+  nonfunctionalreq: string;
+  clientcomments: string;
+  admincomments: string;
 }
 
 export default function ClientProposalsPage() {
@@ -51,6 +52,13 @@ export default function ClientProposalsPage() {
   const [editDescription, setEditDescription] = useState("")
   const [editValue, setEditValue] = useState("")
   const [editExpectedClose, setEditExpectedClose] = useState("")
+  const [editFunctionalReq, setEditFunctionalReq] = useState("")
+  const [editNonFunctionalReq, setEditNonFunctionalReq] = useState("")
+  const [editComments, setEditComments] = useState("")
+
+  // View Details State
+  const [showViewDialog, setShowViewDialog] = useState(false)
+  const [viewProposal, setViewProposal] = useState<Proposal | null>(null)
 
   const fetchProposals = async () => {
     try {
@@ -122,9 +130,16 @@ export default function ClientProposalsPage() {
     setEditTitle(proposal.title)
     setEditDescription(proposal.description || "")
     setEditValue(proposal.amount.toString())
-    // Format date for input type="date" if needed, assuming YYYY-MM-DD from API
-    setEditExpectedClose(proposal.expected_close || "") 
+    setEditExpectedClose(proposal.expectedclose || "") 
+    setEditFunctionalReq(proposal.functionalreq || "")
+    setEditNonFunctionalReq(proposal.nonfunctionalreq || "")
+    setEditComments(proposal.clientcomments || "")
     setShowEditDialog(true)
+  }
+
+  const openViewDialog = (proposal: Proposal) => {
+    setViewProposal(proposal)
+    setShowViewDialog(true)
   }
 
   const handleReworkProposal = async () => {
@@ -138,7 +153,10 @@ export default function ClientProposalsPage() {
                 title: editTitle,
                 description: editDescription,
                 value: editValue,
-                expectedClose: editExpectedClose
+                expectedClose: editExpectedClose,
+                functionalReq: editFunctionalReq,
+                nonFunctionalReq: editNonFunctionalReq,
+                comments: editComments
             })
         })
 
@@ -341,6 +359,14 @@ export default function ClientProposalsPage() {
                           {getDisplayStatus(proposal.status)}
                         </span>
                         <div className="flex gap-2 justify-end">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-secondary border-border"
+                            onClick={() => openViewDialog(proposal)}
+                          >
+                             View Details
+                          </Button>
                           {/* Show Edit button only if rejected */}
                           {proposal.status.toLowerCase() === 'rejected' && (
                               <Button 
@@ -368,6 +394,73 @@ export default function ClientProposalsPage() {
           </Link>
         </div>
 
+        {/* View Dialog */}
+        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Proposal Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Title</h4>
+                  <p className="text-foreground">{viewProposal?.title}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Status</h4>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(viewProposal?.status || '')}`}>
+                    {getDisplayStatus(viewProposal?.status || '')}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Value</h4>
+                  <p className="text-foreground font-bold">${(viewProposal?.amount || 0).toLocaleString()}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground">Expected Close</h4>
+                  <p className="text-foreground">{viewProposal?.expectedclose}</p>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-sm text-muted-foreground mb-1">Description</h4>
+                <div className="p-3 bg-secondary rounded-md text-sm whitespace-pre-wrap">{viewProposal?.description}</div>
+              </div>
+
+              {viewProposal?.functionalreq && (
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-1">Functional Requirements</h4>
+                  <div className="p-3 bg-secondary rounded-md text-sm whitespace-pre-wrap">{viewProposal.functionalreq}</div>
+                </div>
+              )}
+
+              {viewProposal?.nonfunctionalreq && (
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-1">Non-Functional Requirements</h4>
+                  <div className="p-3 bg-secondary rounded-md text-sm whitespace-pre-wrap">{viewProposal.nonfunctionalreq}</div>
+                </div>
+              )}
+
+              {viewProposal?.clientcomments && (
+                <div>
+                  <h4 className="font-semibold text-sm text-muted-foreground mb-1">Additional Comments</h4>
+                  <div className="p-3 bg-secondary rounded-md text-sm whitespace-pre-wrap">{viewProposal.clientcomments}</div>
+                </div>
+              )}
+
+              {viewProposal?.admincomments && (
+                <div>
+                  <h4 className="font-semibold text-sm text-destructive mb-1">Admin Feedback (Rejection Reason)</h4>
+                  <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm whitespace-pre-wrap">{viewProposal.admincomments}</div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowViewDialog(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Edit Dialog */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -391,7 +484,19 @@ export default function ClientProposalsPage() {
                     </div>
                     <div>
                         <label className="text-sm font-medium block mb-1">Description</label>
-                        <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="h-32" />
+                        <Textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="h-24" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium block mb-1">Functional Requirements</label>
+                        <Textarea value={editFunctionalReq} onChange={(e) => setEditFunctionalReq(e.target.value)} className="h-24" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium block mb-1">Non-Functional Requirements</label>
+                        <Textarea value={editNonFunctionalReq} onChange={(e) => setEditNonFunctionalReq(e.target.value)} className="h-24" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium block mb-1">Additional Comments</label>
+                        <Textarea value={editComments} onChange={(e) => setEditComments(e.target.value)} className="h-20" />
                     </div>
                 </div>
                 <DialogFooter>

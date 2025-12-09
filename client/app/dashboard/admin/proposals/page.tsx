@@ -37,6 +37,9 @@ interface Proposal {
   date: string;
   admincomments?: string;
   pmid?: number;
+  functionalreq?: string;
+  nonfunctionalreq?: string;
+  clientcomments?: string;
 }
 
 interface ProjectManager {
@@ -409,6 +412,30 @@ export default function ProposalsPage() {
                     {selectedProposal?.description || "No description provided."}
                   </div>
                 </div>
+                {selectedProposal?.functionalreq && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-2">Functional Requirements</h4>
+                    <div className="p-4 bg-secondary rounded-md text-sm whitespace-pre-wrap">
+                      {selectedProposal.functionalreq}
+                    </div>
+                  </div>
+                )}
+                {selectedProposal?.nonfunctionalreq && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-2">Non-Functional Requirements</h4>
+                    <div className="p-4 bg-secondary rounded-md text-sm whitespace-pre-wrap">
+                      {selectedProposal.nonfunctionalreq}
+                    </div>
+                  </div>
+                )}
+                {selectedProposal?.clientcomments && (
+                  <div>
+                    <h4 className="font-semibold text-sm text-muted-foreground mb-2">Client Comments</h4>
+                    <div className="p-4 bg-secondary rounded-md text-sm whitespace-pre-wrap">
+                      {selectedProposal.clientcomments}
+                    </div>
+                  </div>
+                )}
                 {selectedProposal?.admincomments && (
                   <div>
                     <h4 className="font-semibold text-sm text-muted-foreground mb-2">Admin Comments</h4>

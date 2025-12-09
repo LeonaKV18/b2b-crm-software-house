@@ -7,7 +7,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const proposalId = id;
     const body = await req.json();
-    const { title, description, value, expectedClose } = body;
+    const { title, description, value, expectedClose, functionalReq, nonFunctionalReq, comments } = body;
 
     if (!proposalId || !title || !value) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -19,11 +19,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       p_description: description || '',
       p_value: Number(value),
       p_expected_close: expectedClose ? new Date(expectedClose) : null,
+      p_functional_req: functionalReq || '',
+      p_non_functional_req: nonFunctionalReq || '',
+      p_client_comments: comments || '',
       p_success: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
     };
 
     const result = await executeQuery<{ p_success: number }>(
-      `BEGIN rework_proposal(:p_proposal_id, :p_title, :p_description, :p_value, :p_expected_close, :p_success); END;`,
+      `BEGIN rework_proposal(:p_proposal_id, :p_title, :p_description, :p_value, :p_expected_close, :p_functional_req, :p_non_functional_req, :p_client_comments, :p_success); END;`,
       bindVars
     );
 

@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     if (result && result.p_proposal_id) {
       return NextResponse.json({ success: true, proposalId: result.p_proposal_id }, { status: 201 });
     } else {
-      return NextResponse.json({ error: "Failed to create proposal" }, { status: 500 });
+      console.error("Failed to create proposal: Client record might be missing for user", userId);
+      return NextResponse.json({ error: "Failed to create proposal. Ensure your client profile is set up correctly." }, { status: 400 });
     }
   } catch (error) {
     console.error("Error creating client proposal:", error);

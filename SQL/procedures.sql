@@ -86,16 +86,19 @@ BEGIN
             p.description AS "description",
             p.status AS "status",
             p.value AS "value",
-            u.name AS "createdBy",
+            uc.name AS "createdBy",
             TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date",
             p.admin_comments AS "adminComments",
-            p.pm_user_id AS "pmId"
+            p.pm_user_id AS "pmId",
+            p.functional_requirements AS "functionalReq",
+            p.non_functional_requirements AS "nonFunctionalReq",
+            p.client_comments AS "clientComments"
         FROM
             proposals p
         JOIN
             clients c ON p.client_id = c.client_id
-        LEFT JOIN
-            users u ON p.pm_user_id = u.user_id;
+        JOIN
+            users uc ON c.user_id = uc.user_id;
 END;
 /
 
@@ -214,16 +217,22 @@ BEGIN
             SELECT
                 p.proposal_id AS "id",
                 p.title AS "title",
+                p.description AS "description",
                 p.value AS "amount",
                 p.status AS "status",
-                TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date"
+                TO_CHAR(p.created_at, 'YYYY-MM-DD') AS "date",
+                p.functional_requirements AS "functionalReq",
+                p.non_functional_requirements AS "nonFunctionalReq",
+                p.client_comments AS "clientComments",
+                p.admin_comments AS "adminComments",
+                TO_CHAR(p.expected_close, 'YYYY-MM-DD') AS "expectedClose"
             FROM
                 proposals p
             WHERE
                 p.client_id = v_client_id;
     ELSE
         OPEN p_proposals_cursor FOR
-            SELECT NULL AS "id", NULL AS "title", NULL AS "amount", NULL AS "status", NULL AS "date"
+            SELECT NULL AS "id", NULL AS "title", NULL AS "description", NULL AS "amount", NULL AS "status", NULL AS "date", NULL AS "functionalReq", NULL AS "nonFunctionalReq", NULL AS "clientComments", NULL AS "adminComments", NULL AS "expectedClose"
             FROM dual
             WHERE 1 = 0;
     END IF;
@@ -244,7 +253,13 @@ CREATE OR REPLACE PROCEDURE create_client_proposal (
 AS
     v_client_id NUMBER;
 BEGIN
-    SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    BEGIN
+        SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            p_proposal_id := NULL;
+            RETURN;
+    END;
 
     INSERT INTO proposals (
         client_id, title, description, value, status, created_at, 
@@ -1541,6 +1556,9 @@ CREATE OR REPLACE PROCEDURE rework_proposal (
     p_description IN CLOB,
     p_value IN NUMBER,
     p_expected_close IN DATE,
+    p_functional_req IN CLOB,
+    p_non_functional_req IN CLOB,
+    p_client_comments IN CLOB,
     p_success OUT NUMBER
 )
 AS
@@ -1550,6 +1568,9 @@ BEGIN
         description = p_description,
         value = p_value,
         expected_close = p_expected_close,
+        functional_requirements = p_functional_req,
+        non_functional_requirements = p_non_functional_req,
+        client_comments = p_client_comments,
         status = 'submitted', -- Reset status to submitted for review
         admin_comments = NULL -- Clear previous rejection comments
     WHERE proposal_id = p_proposal_id;
