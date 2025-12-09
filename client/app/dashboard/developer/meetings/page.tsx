@@ -42,7 +42,12 @@ export default function MeetingsPage() {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
         const data = await response.json()
-        setMeetings(data)
+        const mappedMeetings = data.map((m: any) => ({
+            ...m,
+            startTime: m.starttime,
+            endTime: m.endtime,
+        }))
+        setMeetings(mappedMeetings)
       } catch (err) {
         console.error("Failed to fetch developer meetings:", err)
         setError("Failed to load meetings.")

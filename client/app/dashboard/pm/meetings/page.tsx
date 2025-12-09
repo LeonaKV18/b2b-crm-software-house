@@ -78,10 +78,14 @@ export default function PMMeetingsPage() {
       // Ensure data matches Meeting interface
       // API returns: id, title, date (formatted), startTime (formatted), endTime (formatted), attendees, status
       // We map API response to local state.
-      // API: { id, title, date, startTime, endTime, attendees, status, ... }
+      // API returns keys in lowercase: id, title, date, starttime, endtime, attendees, status, project, mom
       const mappedMeetings = data.map((m: any) => ({
           ...m,
-          // If API returns different keys, map them here. Currently aligned.
+          startTime: m.starttime, // API returns lowercase
+          endTime: m.endtime,     // API returns lowercase
+          date: m.date,
+          mom: m.mom,
+          project: m.project
       }))
       setMeetings(mappedMeetings)
     } catch (err) {

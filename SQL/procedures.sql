@@ -899,7 +899,9 @@ BEGIN
             TO_CHAR(m.scheduled_start_date, 'HH:MI AM') AS "startTime",
             TO_CHAR(m.scheduled_end_date, 'HH:MI AM') AS "endTime",
             (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS "attendees",
-             m.status AS "status"
+             m.status AS "status",
+             p.title AS "project",
+             m.minutes_of_meeting AS "mom"
         FROM
             meetings m
         JOIN
