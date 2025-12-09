@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState, useEffect } from "react" // Import useEffect
+import { useState, useEffect, use } from "react" // Import useEffect
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus } from "lucide-react"
@@ -43,10 +43,11 @@ interface Developer {
   email: string;
 }
 
-export default function ProjectDetailsPage({ params }: { params: { id: string } }) {
+export default function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
-  const [currentPath] = useState(`/dashboard/admin/projects/${params.id}`)
+  const { id: projectId } = use(params);
+  const [currentPath] = useState(`/dashboard/admin/projects/${projectId}`)
 
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -68,9 +69,9 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
       try {
         setLoading(true)
         const [projectRes, teamRes, milestonesRes] = await Promise.all([
-          fetch(`/api/project-details/${params.id}`),
-          fetch(`/api/project-team/${params.id}`),
-          fetch(`/api/project-milestones/${params.id}`),
+          fetch(`/api/project-details/${projectId}`),
+          fetch(`/api/project-team/${projectId}`),
+          fetch(`/api/project-milestones/${projectId}`),
         ])
 
         if (!projectRes.ok) throw new Error(`HTTP error! Project details: ${projectRes.status}`)
@@ -93,7 +94,7 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
     }
 
     fetchProjectData()
-  }, [isLoggedIn, user?.role, router, params.id])
+  }, [isLoggedIn, user?.role, router, projectId])
 
   useEffect(() => {
     if (showAssignDeveloperDialog) {
@@ -128,11 +129,18 @@ export default function ProjectDetailsPage({ params }: { params: { id: string } 
         alert("Developer assigned successfully to unassigned tasks.")
         setShowAssignDeveloperDialog(false)
         setSelectedDeveloper("")
-        // Re-fetch project team members to update the list
-        const teamRes = await fetch(`/api/project-team/${params.id}`)
+        // Re-fetch project team members and milestones to update the list
+        const [teamRes, milestonesRes] = await Promise.all([
+          fetch(`/api/project-team/${projectId}`),
+          fetch(`/api/project-milestones/${projectId}`),
+        ])
         if (teamRes.ok) {
           const teamData = await teamRes.json()
           setTeamMembers(teamData)
+        }
+        if (milestonesRes.ok) {
+          const milestonesData = await milestonesRes.json()
+          setMilestones(milestonesData)
         }
       } else {
         alert("Failed to assign developer.")
