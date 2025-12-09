@@ -99,7 +99,7 @@ CREATE TABLE proposals (
     estimated_hours NUMBER,
     actual_hours NUMBER,
     value NUMBER,
-    status VARCHAR2(50) CHECK (status IN ('draft','submitted', 'rejected', 'in_progress', 'completed')),
+    status VARCHAR2(50) CHECK (status IN ('draft','submitted', 'rejected', 'in_progress', 'completed', 'active')),
     admin_comments CLOB,
     srs_approved NUMBER(1,0) DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

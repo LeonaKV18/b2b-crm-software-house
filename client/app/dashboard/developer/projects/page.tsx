@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/sidebar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { Briefcase, MapPin } from "lucide-react"
+import Link from "next/link"
 
 interface Project {
   id: number;

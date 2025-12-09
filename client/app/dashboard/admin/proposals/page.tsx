@@ -182,7 +182,7 @@ export default function ProposalsPage() {
   }
 
   const filtered = proposals
-    .filter((p) => p.status !== 'active' && p.status !== 'completed')
+    .filter((p) => p.status !== 'active' && p.status !== 'completed' && p.status !== 'rejected')
     .filter((p) => p.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
   const getStatusBadge = (status: string) => {
@@ -202,7 +202,7 @@ export default function ProposalsPage() {
     { stage: "Draft", count: proposals.filter(p => p.status.toLowerCase() === 'draft').length, color: "bg-muted/20" },
     { stage: "Submitted", count: proposals.filter(p => p.status.toLowerCase() === 'submitted').length, color: "bg-primary/20" },
     { stage: "Client Review", count: proposals.filter(p => p.status.toLowerCase() === 'client review').length, color: "bg-chart-1/20" },
-    { stage: "Approved", count: proposals.filter(p => p.status.toLowerCase() === 'approved').length, color: "bg-chart-3/20" },
+    { stage: "Approved", count: proposals.filter(p => p.status.toLowerCase() === 'active').length, color: "bg-chart-3/20" },
   ];
 
   if (loading) {

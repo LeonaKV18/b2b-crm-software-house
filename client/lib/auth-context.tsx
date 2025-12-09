@@ -45,12 +45,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return true;
       } else {
         let errorData = "Unknown error";
+        const rawErrorText = await response.text(); // Capture raw response first
+        console.error("Raw login error response:", rawErrorText); // Log raw response
         try {
           const contentType = response.headers.get("content-type");
           if (contentType && contentType.includes("application/json")) {
-            errorData = await response.json();
+            errorData = JSON.parse(rawErrorText); // Parse the captured raw text
           } else {
-            errorData = await response.text();
+            errorData = rawErrorText;
           }
         } catch (parseError) {
           errorData = `Failed to parse error response as JSON or text: ${parseError}`;

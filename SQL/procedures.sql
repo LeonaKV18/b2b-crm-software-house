@@ -739,7 +739,7 @@ CREATE OR REPLACE PROCEDURE get_admin_conversion_data (
 AS
 BEGIN
     SELECT COUNT(*) INTO p_proposals_count FROM proposals;
-    SELECT COUNT(*) INTO p_approved_count FROM proposals WHERE status = 'approved';
+    SELECT COUNT(*) INTO p_approved_count FROM proposals WHERE status IN ('active', 'completed');
     SELECT COUNT(*) INTO p_rejected_count FROM proposals WHERE status = 'rejected';
 END;
 /
