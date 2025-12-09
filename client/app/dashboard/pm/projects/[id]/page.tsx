@@ -201,6 +201,11 @@ export default function PMProjectDetailsPage({ params }: { params: Promise<{ id:
   }
 
   const handleCompleteProject = async () => {
+    if (milestones.length === 0) {
+      alert("Cannot complete project: No milestones found.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to complete this project? This will generate an invoice for the client.")) return;
 
     try {

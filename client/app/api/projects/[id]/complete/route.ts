@@ -11,6 +11,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
 
+    // Check if the project has milestones
+    const milestoneCheck = await executeQuery<[{ count: number }]>(
+      `SELECT COUNT(*) as "count" FROM tasks WHERE proposal_id = :id AND parent_task_id IS NULL`,
+      { id: Number(projectId) }
+    );
+
+    const milestoneCount = milestoneCheck && milestoneCheck[0] ? milestoneCheck[0].count : 0;
+
+    if (milestoneCount === 0) {
+      return NextResponse.json({ error: "Cannot complete project: No milestones found." }, { status: 400 });
+    }
+
     const bindVars = {
       p_proposal_id: Number(projectId),
       p_success: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },

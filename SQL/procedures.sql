@@ -1595,6 +1595,22 @@ BEGIN
     FROM proposals
     WHERE proposal_id = p_proposal_id;
 
+    -- Check if the project has any milestones (top-level tasks)
+    DECLARE
+        v_milestone_count NUMBER;
+    BEGIN
+        SELECT COUNT(*)
+        INTO v_milestone_count
+        FROM tasks
+        WHERE proposal_id = p_proposal_id
+        AND parent_task_id IS NULL;
+
+        IF v_milestone_count = 0 THEN
+            p_success := 0;
+            RETURN; -- Exit the procedure
+        END IF;
+    END;
+
     -- Update Project Status
     UPDATE proposals
     SET status = 'completed',
