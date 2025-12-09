@@ -717,42 +717,49 @@ END;
 /
 
 CREATE OR REPLACE PROCEDURE get_admin_conversion_data (
-    p_leads_count OUT NUMBER,
     p_proposals_count OUT NUMBER,
-    p_approved_count OUT NUMBER
+    p_approved_count OUT NUMBER,
+    p_rejected_count OUT NUMBER
 )
 AS
 BEGIN
-    p_leads_count := 0; 
     SELECT COUNT(*) INTO p_proposals_count FROM proposals;
     SELECT COUNT(*) INTO p_approved_count FROM proposals WHERE status = 'approved';
+    SELECT COUNT(*) INTO p_rejected_count FROM proposals WHERE status = 'rejected';
 END;
 /
 
 CREATE OR REPLACE PROCEDURE get_admin_project_status (
-    p_on_time_count OUT NUMBER,
-    p_at_risk_count OUT NUMBER,
-    p_delayed_count OUT NUMBER
+    p_on_track_count OUT NUMBER,
+    p_not_on_time_count OUT NUMBER
 )
 AS
 BEGIN
+    -- On Track:
+    -- Active/In Progress projects where deadline is in future or today
+    -- Completed projects where actual_close <= expected_close
     SELECT COUNT(*)
-    INTO p_on_time_count
+    INTO p_on_track_count
     FROM proposals
-    WHERE status IN ('active', 'in_progress')
-    AND expected_close >= SYSDATE;
+    WHERE status IN ('active', 'in_progress', 'completed')
+    AND (
+        (status IN ('active', 'in_progress') AND expected_close >= TRUNC(SYSDATE))
+        OR
+        (status = 'completed' AND actual_close <= expected_close)
+    );
 
+    -- Not On Time:
+    -- Active/In Progress projects where deadline is past
+    -- Completed projects where actual_close > expected_close
     SELECT COUNT(*)
-    INTO p_at_risk_count
+    INTO p_not_on_time_count
     FROM proposals
-    WHERE status IN ('active', 'in_progress')
-    AND expected_close >= SYSDATE AND expected_close <= SYSDATE + 7;
-
-    SELECT COUNT(*)
-    INTO p_delayed_count
-    FROM proposals
-    WHERE status IN ('active', 'in_progress')
-    AND expected_close < SYSDATE;
+    WHERE status IN ('active', 'in_progress', 'completed')
+    AND (
+        (status IN ('active', 'in_progress') AND expected_close < TRUNC(SYSDATE))
+        OR
+        (status = 'completed' AND actual_close > expected_close)
+    );
 END;
 /
 

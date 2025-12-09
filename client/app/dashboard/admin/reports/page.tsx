@@ -21,10 +21,8 @@ const ResponsiveContainer = dynamic(() => import("recharts").then((mod) => mod.R
 const PieChart = dynamic(() => import("recharts").then((mod) => mod.PieChart), { ssr: false })
 const Pie = dynamic(() => import("recharts").then((mod) => mod.Pie), { ssr: false })
 const Cell = dynamic(() => import("recharts").then((mod) => mod.Cell), { ssr: false })
-import { Download } from "lucide-react"
 import Link from "next/link"
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
+
 
 interface RevenueEntry {
   month: string;
@@ -32,15 +30,14 @@ interface RevenueEntry {
 }
 
 interface ConversionData {
-  leadsCount: number;
   proposalsCount: number;
   approvedCount: number;
+  rejectedCount: number;
 }
 
 interface ProjectStatusData {
-  onTimeCount: number;
-  atRiskCount: number;
-  delayedCount: number;
+  onTrackCount: number;
+  notOnTimeCount: number;
 }
 
 interface SummaryMetrics {
@@ -86,11 +83,12 @@ export default function ReportsPage() {
         const revenueData = await revenueRes.json()
         const conversionData = await conversionRes.json()
         const projectStatusData = await projectStatusRes.json()
-        const summaryData = await summaryRes.json()
-
+        const { onTrackCount, notOnTimeCount } = projectStatusData; // Destructure new counts
+        
         setRevenueData(revenueData)
         setConversionStats(conversionData)
-        setProjectStatusCounts(projectStatusData)
+        setProjectStatusCounts({ onTrackCount, notOnTimeCount })
+        const summaryData = await summaryRes.json()
         setSummaryMetrics(summaryData)
       } catch (err) {
         console.error("Failed to fetch reports data:", err)
@@ -103,43 +101,7 @@ export default function ReportsPage() {
     fetchReportsData()
   }, [isLoggedIn, user?.role, router])
 
-  const handleDownloadPdf = async () => {
-    const input = document.getElementById('admin-report-content');
-    if (input) {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const addPage = async (element: HTMLElement, pageNum: number, totalPages: number) => {
-          const canvas = await html2canvas(element, { scale: 2 }); // Higher scale for better quality
-          const imgData = canvas.toDataURL('image/png');
-          const imgWidth = 210; 
-          const pageHeight = 297; 
-          const imgHeight = canvas.height * imgWidth / canvas.width;
-          let heightLeft = imgHeight;
-          let position = 0;
 
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
-
-          while (heightLeft >= -50) { // -50 to capture a little more from next page if needed
-              position = heightLeft - imgHeight;
-              pdf.addPage();
-              pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-              heightLeft -= pageHeight;
-          }
-      };
-
-      // Create a temporary div to render the content for PDF
-      const tempDiv = document.createElement('div');
-      tempDiv.style.width = '210mm'; // A4 width
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      document.body.appendChild(tempDiv);
-      tempDiv.innerHTML = input.outerHTML; // Clone the content
-
-      await addPage(tempDiv, 1, 1); // Only one "page" for now
-      pdf.save('admin_report.pdf');
-      document.body.removeChild(tempDiv); // Clean up
-    }
-  };
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
@@ -163,17 +125,43 @@ export default function ReportsPage() {
 
   // Process data for charts
   const processedConversionData = conversionStats ? [
-    { stage: "Leads", count: conversionStats.leadsCount },
     { stage: "Proposals", count: conversionStats.proposalsCount },
     { stage: "Approved", count: conversionStats.approvedCount },
+    { stage: "Rejected", count: conversionStats.rejectedCount },
   ] : [];
 
-  const totalProjects = (projectStatusCounts?.onTimeCount || 0) + (projectStatusCounts?.atRiskCount || 0) + (projectStatusCounts?.delayedCount || 0);
-  const processedProjectStatus = totalProjects > 0 && projectStatusCounts ? [
-    { name: "On Time", value: Math.round(((projectStatusCounts.onTimeCount || 0) / totalProjects) * 100), color: "#22c55e" },
-    { name: "At Risk", value: Math.round(((projectStatusCounts.atRiskCount || 0) / totalProjects) * 100), color: "#f59e0b" },
-    { name: "Delayed", value: Math.round(((projectStatusCounts.delayedCount || 0) / totalProjects) * 100), color: "#ef4444" },
-  ] : [];
+  const totalProjects = (projectStatusCounts?.onTrackCount || 0) + (projectStatusCounts?.notOnTimeCount || 0);
+  const processedProjectStatus = totalProjects > 0 ? [
+    { name: "On Track", value: Math.round(((projectStatusCounts.onTrackCount || 0) / totalProjects) * 100), color: "#22c55e" }, // Green
+    { name: "Not On Time", value: Math.round(((projectStatusCounts.notOnTimeCount || 0) / totalProjects) * 100), color: "#ef4444" }, // Red
+  ].filter(project => project.value > 0) : [];
+
+  const RADIAN = Math.PI / 180;
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name, value }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={processedProjectStatus[index].color} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill={processedProjectStatus[index].color} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#fff" fontSize="12px">
+          {`${name}: ${value}%`}
+        </text>
+      </g>
+    );
+  };
 
 
   return (
@@ -188,25 +176,11 @@ export default function ReportsPage() {
               <h1 className="text-2xl font-bold text-foreground">Analytics & Reports</h1>
               <p className="text-sm text-muted-foreground">Business insights and performance metrics</p>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="bg-secondary border-border flex items-center gap-2"
-                onClick={handleDownloadPdf}
-              >
-                <Download size={20} />
-                Export PDF
-              </Button>
-              <Button variant="outline" className="bg-secondary border-border flex items-center gap-2">
-                <Download size={20} />
-                Export CSV
-              </Button>
-            </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="p-8 space-y-8" id="admin-report-content">
+        <div className="p-8 space-y-8">
           {/* Revenue Chart */}
           <Card className="bg-card border border-border">
             <CardHeader>
@@ -278,11 +252,12 @@ export default function ReportsPage() {
                       data={processedProjectStatus}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => `${name}: ${value}%`}
-                      outerRadius={100}
+                      labelLine={true}
+                      label={renderCustomizedLabel}
+                      outerRadius={80} // Adjusted for better label positioning
                       fill="#8884d8"
                       dataKey="value"
+                      nameKey="name" // Important for custom labels
                     >
                       {processedProjectStatus.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
