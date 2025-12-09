@@ -258,13 +258,7 @@ export default function ProposalsPage() {
                 className="pl-10 bg-secondary border-border"
               />
             </div>
-            <select className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground">
-              <option>All Status</option>
-              <option>Draft</option>
-              <option>Submitted</option>
-              <option>Client Review</option>
-              <option>Approved</option>
-            </select>
+
           </div>
 
           {/* Proposals Table */}
