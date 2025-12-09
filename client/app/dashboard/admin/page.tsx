@@ -214,11 +214,7 @@ export default function AdminDashboard() {
                 </Button>
               </Link>
 
-              <Link href="/">
-                <Button variant="outline" className="w-full bg-secondary border-border hover:bg-secondary/80">
-                  Back to Login
-                </Button>
-              </Link>
+
             </div>
           </div>
         </div>
