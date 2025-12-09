@@ -291,7 +291,7 @@ export default function ClientsPage() {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Projects</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Status</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Last Interaction</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Actions</th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -316,16 +316,7 @@ export default function ClientsPage() {
                         <td className="py-3 px-4 text-sm text-muted-foreground">
                           {client.lastInteraction ? new Date(client.lastInteraction).toLocaleDateString() : "—"}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleMessage(client)}
-                              className="p-1 hover:bg-secondary rounded transition-colors"
-                            >
-                              <Mail size={16} className="text-muted-foreground hover:text-foreground" />
-                            </button>
-                          </div>
-                        </td>
+
                       </tr>
                     ))}
                   </tbody>
