@@ -1,4 +1,3 @@
-
 "use client"
 import { useState, useEffect } from "react" // Import useEffect
 import { useAuth } from "@/lib/auth-context"
@@ -142,6 +141,7 @@ export default function InvoicesPage() {
                               <button className="p-1 hover:bg-secondary rounded transition-colors">
                                 <Download size={16} className="text-muted-foreground hover:text-foreground" />
                               </button>
+                              <Button size="sm">Pay Now</Button>
                             </div>
                           </td>
                         </tr>

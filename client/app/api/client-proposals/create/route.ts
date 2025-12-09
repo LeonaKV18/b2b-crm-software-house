@@ -5,9 +5,9 @@ import * as oracledb from 'oracledb';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, title, description, value } = body;
+    const { userId, title, description, value, requirements, comments, expectedCloseDate } = body;
 
-    if (!userId || !title || !value) {
+    if (!userId || !title || !value || !expectedCloseDate) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -15,13 +15,16 @@ export async function POST(req: NextRequest) {
       p_user_id: Number(userId),
       p_title: title,
       p_description: description || '',
+      p_requirements: requirements || '',
+      p_comments: comments || '',
+      p_expected_close_date: new Date(expectedCloseDate),
       p_value: Number(value),
       p_proposal_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
     };
 
     const result = await executeQuery<{
       p_proposal_id: number;
-    }>(`BEGIN create_client_proposal(:p_user_id, :p_title, :p_description, :p_value, :p_proposal_id); END;`, bindVars);
+    }>(`BEGIN create_client_proposal(:p_user_id, :p_title, :p_description, :p_requirements, :p_comments, :p_expected_close_date, :p_value, :p_proposal_id); END;`, bindVars);
 
     if (result && result.p_proposal_id) {
       return NextResponse.json({ success: true, proposalId: result.p_proposal_id }, { status: 201 });

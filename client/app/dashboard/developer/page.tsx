@@ -18,12 +18,23 @@ interface Task {
   priority: string;
 }
 
+interface Meeting {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  type: string;
+  location: string;
+}
+
+
 export default function DeveloperDashboard() {
   const { user, isLoggedIn } = useAuth()
   const router = useRouter()
   const [currentPath] = useState("/dashboard/developer")
 
   const [tasks, setTasks] = useState<Task[]>([])
+  const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeTasksCount, setActiveTasksCount] = useState(0)
@@ -38,7 +49,6 @@ export default function DeveloperDashboard() {
 
     const fetchTasks = async () => {
       try {
-        setLoading(true)
         const response = await fetch(`/api/developer-tasks?userId=${user?.id}`)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -71,15 +81,55 @@ export default function DeveloperDashboard() {
       } catch (err) {
         console.error("Failed to fetch developer tasks:", err)
         setError("Failed to load tasks.")
-      } finally {
-        setLoading(false)
       }
     }
 
+    const fetchMeetings = async () => {
+      try {
+        const response = await fetch(`/api/developer-meetings?userId=${user?.id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setMeetings(data);
+      } catch (err) {
+        console.error("Failed to fetch developer meetings:", err);
+        // Not setting a general error for meetings, to allow tasks to be displayed
+      }
+    };
+
+
+    const fetchData = async () => {
+      setLoading(true);
+      await Promise.all([fetchTasks(), fetchMeetings()]);
+      setLoading(false);
+    }
+
     if (user?.id) { // Only fetch if user ID is available
-      fetchTasks()
+      fetchData()
     }
   }, [isLoggedIn, user?.role, user?.id, router])
+
+  const handleUpdateStatus = async (taskId: number, status: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+      if (response.ok) {
+        fetchTasks();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to update task status: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error('Error updating task status:', err);
+      alert('An error occurred while updating the task status.');
+    }
+  };
 
   if (!isLoggedIn || user?.role !== "developer") {
     return null
@@ -240,6 +290,15 @@ export default function DeveloperDashboard() {
                           Due: {task.due}
                         </p>
                       </div>
+                      {task.status.toLowerCase() !== 'done' && (
+                        <Button
+                          size="sm"
+                          className="mt-4"
+                          onClick={() => handleUpdateStatus(task.id, 'done')}
+                        >
+                          Mark as Done
+                        </Button>
+                      )}
                     </div>
                   ))
                 )}
@@ -247,13 +306,39 @@ export default function DeveloperDashboard() {
             </CardContent>
           </Card>
 
+          {/* Meetings List */}
+          <Card className="bg-card border border-border">
+            <CardHeader>
+              <CardTitle className="text-foreground">Upcoming Meetings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {meetings.length === 0 ? (
+                  <p className="text-muted-foreground">No upcoming meetings.</p>
+                ) : (
+                  meetings.map((meeting) => (
+                    <div key={meeting.id} className="p-4 bg-secondary rounded-lg border border-border">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{meeting.title}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {meeting.date} at {meeting.time}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Type: {meeting.type} | Location: {meeting.location}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+
           {/* Quick Navigation */}
           <div className="flex gap-2">
-            <Link href="/dashboard/pm">
-              <Button variant="outline" className="bg-secondary border-border">
-                PM Dashboard
-              </Button>
-            </Link>
             <Link href="/">
               <Button variant="outline" className="bg-secondary border-border">
                 Logout

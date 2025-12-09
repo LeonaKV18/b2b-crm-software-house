@@ -14,7 +14,7 @@ interface Milestone {
   project: string;
   status: string;
   dueDate: string;
-  owner: string;
+  fee: number;
 }
 
 export default function MilestonesPage() {
@@ -25,12 +25,21 @@ export default function MilestonesPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
+  
+  // Form state
+  const [newDescription, setNewDescription] = useState("")
+  const [newFee, setNewFee] = useState("")
+  const [newDueDate, setNewDueDate] = useState("")
+  const [selectedProposal, setSelectedProposal] = useState("")
+  const [selectedTask, setSelectedTask] = useState("")
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "pm") {
       router.push("/")
       return
     }
+
 
     const fetchMilestones = async () => {
       try {
@@ -53,6 +62,41 @@ export default function MilestonesPage() {
       fetchMilestones()
     }
   }, [isLoggedIn, user?.role, user?.id, router])
+
+  const handleCreateMilestone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch("/api/milestones/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          proposalId: selectedProposal,
+          taskId: selectedTask,
+          description: newDescription,
+          fee: newFee,
+          dueDate: newDueDate,
+        }),
+      });
+
+      if (response.ok) {
+        setShowAddForm(false);
+        // Clear form
+        setSelectedProposal("");
+        setSelectedTask("");
+        setNewDescription("");
+        setNewFee("");
+        setNewDueDate("");
+        // Refresh list
+        fetchMilestones();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create milestone: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error("Error creating milestone:", err);
+      alert("An error occurred while creating the milestone.");
+    }
+  };
 
   if (!isLoggedIn || user?.role !== "pm") {
     return null
@@ -112,7 +156,10 @@ export default function MilestonesPage() {
               <h1 className="text-2xl font-bold text-foreground">Milestones</h1>
               <p className="text-sm text-muted-foreground">Track project milestones</p>
             </div>
-            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+            <Button
+              onClick={() => setShowAddForm(true)}
+              className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+            >
               <Plus size={20} />
               Add Milestone
             </Button>
@@ -121,6 +168,61 @@ export default function MilestonesPage() {
 
         {/* Main Content */}
         <div className="p-8">
+          {showAddForm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <Card className="bg-card border border-border w-1/3">
+                <CardHeader>
+                  <CardTitle>Add New Milestone</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateMilestone} className="space-y-4">
+                    {/* In a real app, these would be dropdowns populated from the API */}
+                    <input
+                      placeholder="Proposal ID"
+                      value={selectedProposal}
+                      onChange={(e) => setSelectedProposal(e.target.value)}
+                      className="w-full p-2 border rounded-md bg-input text-foreground"
+                    />
+                    <input
+                      placeholder="Task ID (Optional)"
+                      value={selectedTask}
+                      onChange={(e) => setSelectedTask(e.target.value)}
+                      className="w-full p-2 border rounded-md bg-input text-foreground"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      className="w-full p-2 border rounded-md bg-input text-foreground"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Fee"
+                      value={newFee}
+                      onChange={(e) => setNewFee(e.target.value)}
+                      className="w-full p-2 border rounded-md bg-input text-foreground"
+                    />
+                    <input
+                      type="date"
+                      value={newDueDate}
+                      onChange={(e) => setNewDueDate(e.target.value)}
+                      className="w-full p-2 border rounded-md bg-input text-foreground"
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit">Create</Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
+          )}
           <div className="space-y-3">
             {milestones.length === 0 ? (
               <p className="text-muted-foreground">No milestones found for this Project Manager.</p>
@@ -142,7 +244,7 @@ export default function MilestonesPage() {
                         <div className="flex-1">
                           <p className="font-bold text-foreground text-lg">{milestone.name}</p>
                           <p className="text-sm text-muted-foreground">{milestone.project}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Owner: {milestone.owner}</p>
+                          <p className="text-sm font-bold text-foreground mt-1">${milestone.fee.toLocaleString()}</p>
                         </div>
                       </div>
                       <div className="text-right">

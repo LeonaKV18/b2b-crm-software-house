@@ -1,5 +1,6 @@
 import { executeQuery } from "@/lib/oracle";
 import { NextRequest, NextResponse } from "next/server";
+import * as oracledb from "oracledb";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     }
 
     const result = await executeQuery(
-      `BEGIN get_developer_meetings(:p_user_id, :p_meetings_cursor); END;`,
+      `BEGIN get_client_meetings(:p_user_id, :p_meetings_cursor); END;`,
       {
         p_user_id: Number(userId),
         p_meetings_cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
@@ -27,11 +28,10 @@ export async function GET(req: NextRequest) {
         return NextResponse.json([]);
     }
   } catch (error) {
-    console.error("Error fetching developer meetings:", error);
+    console.error("Error fetching client meetings:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
-import * as oracledb from 'oracledb';

@@ -56,6 +56,7 @@ const menuItems: Record<UserRole, { label: string; icon: React.ReactNode; href: 
     { label: "Proposals", icon: <FileText size={18} />, href: "/dashboard/client/proposals" },
     { label: "Projects", icon: <Briefcase size={18} />, href: "/dashboard/client/projects" },
     { label: "Invoices", icon: <CreditCard size={18} />, href: "/dashboard/client/invoices" },
+    { label: "Meetings", icon: <Calendar size={18} />, href: "/dashboard/client/meetings" },
   ],
 }
 

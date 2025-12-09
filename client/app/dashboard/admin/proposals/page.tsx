@@ -30,31 +30,48 @@ export default function ProposalsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const fetchProposals = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/proposals")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setProposals(data)
+    } catch (err) {
+      console.error("Failed to fetch proposals:", err)
+      setError("Failed to load proposals.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
       router.push("/")
       return
     }
 
-    const fetchProposals = async () => {
-      try {
-        setLoading(true)
-        const response = await fetch("/api/proposals")
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        const data = await response.json()
-        setProposals(data)
-      } catch (err) {
-        console.error("Failed to fetch proposals:", err)
-        setError("Failed to load proposals.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchProposals()
   }, [isLoggedIn, user?.role, router])
+
+  const handleApprove = async (proposalId: string) => {
+    try {
+      const response = await fetch(`/api/proposals/${proposalId}/approve`, {
+        method: "PUT",
+      });
+      if (response.ok) {
+        fetchProposals();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to approve proposal: ${errorData.error}`);
+      }
+    } catch (err) {
+      console.error("Error approving proposal:", err);
+      alert("An error occurred while approving the proposal.");
+    }
+  };
 
   if (!isLoggedIn || user?.role !== "admin") {
     return null
@@ -187,7 +204,10 @@ export default function ProposalsPage() {
                             <button className="p-1 hover:bg-secondary rounded transition-colors">
                               <Edit size={16} className="text-muted-foreground hover:text-foreground" />
                             </button>
-                            <button className="p-1 hover:bg-secondary rounded transition-colors">
+                            <button
+                              onClick={() => handleApprove(proposal.id)}
+                              className="p-1 hover:bg-secondary rounded transition-colors"
+                            >
                               <CheckCircle size={16} className="text-muted-foreground hover:text-chart-3" />
                             </button>
                           </div>

@@ -99,11 +99,11 @@ BEGIN
         SELECT
             m.meeting_id AS id,
             m.subject AS title,
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date,
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS time,
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
             (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS attendees,
-            m.meeting_type AS type,
-            m.subject AS location -- Using subject as location for now
+            m.meeting_type AS "type",
+            m.subject AS "location" -- Using subject as location for now
         FROM
             meetings m;
 END;
@@ -246,6 +246,9 @@ CREATE OR REPLACE PROCEDURE create_client_proposal (
     p_user_id IN NUMBER,
     p_title IN VARCHAR2,
     p_description IN CLOB,
+    p_requirements IN CLOB,
+    p_comments IN CLOB,
+    p_expected_close_date IN DATE,
     p_value IN NUMBER,
     p_proposal_id OUT NUMBER
 )
@@ -255,8 +258,8 @@ BEGIN
     -- Get client_id for the given user_id
     SELECT client_id INTO v_client_id FROM clients WHERE user_id = p_user_id;
 
-    INSERT INTO proposals (client_id, title, description, value, status, created_at)
-    VALUES (v_client_id, p_title, p_description, p_value, 'submitted', SYSDATE)
+    INSERT INTO proposals (client_id, title, description, requirements, comments, expected_close, value, status, created_at)
+    VALUES (v_client_id, p_title, p_description, p_requirements, p_comments, p_expected_close_date, p_value, 'submitted', SYSDATE)
     RETURNING proposal_id INTO p_proposal_id;
 
     COMMIT;
@@ -460,18 +463,16 @@ AS
 BEGIN
     OPEN p_milestones_cursor FOR
         SELECT
-            t.task_id AS id,
-            t.title AS name,
+            m.milestone_id AS id,
             pr.title AS project,
-            t.status AS status,
-            TO_CHAR(t.due_date, 'YYYY-MM-DD') AS dueDate,
-            NVL(u.name, 'Unassigned') AS owner
+            m.description AS name,
+            m.status AS status,
+            TO_CHAR(m.due_date, 'YYYY-MM-DD') AS dueDate,
+            m.fee
         FROM
-            tasks t
+            milestones m
         JOIN
-            proposals pr ON t.proposal_id = pr.proposal_id
-        LEFT JOIN
-            users u ON t.locked_by = u.user_id
+            proposals pr ON m.proposal_id = pr.proposal_id
         WHERE
             pr.pm_user_id = p_user_id;
 END;
@@ -928,5 +929,96 @@ BEGIN
             proposals p ON m.proposal_id = p.proposal_id
         WHERE
             p.pm_user_id = p_user_id;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE approve_proposal (
+    p_proposal_id IN NUMBER
+)
+AS
+BEGIN
+    UPDATE proposals
+    SET status = 'active'
+    WHERE proposal_id = p_proposal_id;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE create_milestone (
+    p_proposal_id IN NUMBER,
+    p_task_id IN NUMBER,
+    p_description IN CLOB,
+    p_fee IN NUMBER,
+    p_due_date IN DATE
+)
+AS
+BEGIN
+    INSERT INTO milestones (proposal_id, task_id, description, fee, due_date, status)
+    VALUES (p_proposal_id, p_task_id, p_description, p_fee, p_due_date, 'pending');
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE update_task_status (
+    p_task_id IN NUMBER,
+    p_status IN VARCHAR2
+)
+AS
+BEGIN
+    UPDATE tasks
+    SET status = p_status,
+        completed_date = CASE WHEN p_status = 'done' THEN SYSDATE ELSE NULL END
+    WHERE task_id = p_task_id;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE cancel_proposal (
+    p_proposal_id IN NUMBER
+)
+AS
+BEGIN
+    UPDATE proposals
+    SET status = 'rejected' -- Or a new 'cancelled' status if you add it
+    WHERE proposal_id = p_proposal_id;
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE get_client_meetings (
+    p_user_id IN NUMBER,
+    p_meetings_cursor OUT SYS_REFCURSOR
+)
+AS
+BEGIN
+    OPEN p_meetings_cursor FOR
+        SELECT
+            m.meeting_id AS id,
+            m.subject AS title,
+            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
+            m.subject AS location -- Using subject as location for now
+        FROM
+            meetings m
+        JOIN
+            meeting_participants mp ON m.meeting_id = mp.meeting_id
+        WHERE
+            mp.user_id = p_user_id;
 END;
 /

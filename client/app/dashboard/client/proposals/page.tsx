@@ -32,6 +32,9 @@ export default function ClientProposalsPage() {
   const [newTitle, setNewTitle] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [newValue, setNewValue] = useState("")
+  const [newRequirements, setNewRequirements] = useState("")
+  const [newComments, setNewComments] = useState("")
+  const [newExpectedCloseDate, setNewExpectedCloseDate] = useState("")
 
   const fetchProposals = async () => {
     try {
@@ -75,6 +78,9 @@ export default function ClientProposalsPage() {
           title: newTitle,
           description: newDescription,
           value: newValue,
+          requirements: newRequirements,
+          comments: newComments,
+          expectedCloseDate: newExpectedCloseDate,
         }),
       })
 
@@ -83,6 +89,9 @@ export default function ClientProposalsPage() {
         setNewTitle("")
         setNewDescription("")
         setNewValue("")
+        setNewRequirements("")
+        setNewComments("")
+        setNewExpectedCloseDate("")
         fetchProposals() // Refresh list
       } else {
         const errorData = await response.json()
@@ -93,6 +102,25 @@ export default function ClientProposalsPage() {
       alert("An error occurred while creating the proposal.")
     }
   }
+
+  const handleCancelProposal = async (proposalId: number) => {
+    if (window.confirm("Are you sure you want to cancel this proposal?")) {
+      try {
+        const response = await fetch(`/api/proposals/${proposalId}/cancel`, {
+          method: 'PUT',
+        });
+        if (response.ok) {
+          fetchProposals();
+        } else {
+          const errorData = await response.json();
+          alert(`Failed to cancel proposal: ${errorData.error}`);
+        }
+      } catch (err) {
+        console.error('Error cancelling proposal:', err);
+        alert('An error occurred while cancelling the proposal.');
+      }
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusStyles: Record<string, string> = {
@@ -189,6 +217,34 @@ export default function ClientProposalsPage() {
                       className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
                     />
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Requirements</label>
+                    <textarea
+                      value={newRequirements}
+                      onChange={(e) => setNewRequirements(e.target.value)}
+                      placeholder="Enter project requirements..."
+                      className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Comments</label>
+                    <textarea
+                      value={newComments}
+                      onChange={(e) => setNewComments(e.target.value)}
+                      placeholder="Any additional comments..."
+                      className="w-full h-24 px-3 py-2 bg-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1 block">Expected Close Date</label>
+                    <Input
+                      type="date"
+                      value={newExpectedCloseDate}
+                      onChange={(e) => setNewExpectedCloseDate(e.target.value)}
+                      required
+                      className="bg-secondary border-border"
+                    />
+                  </div>
                   <div className="flex gap-2">
                     <Button type="submit" className="bg-primary hover:bg-primary/90">
                       Submit Proposal
@@ -242,12 +298,13 @@ export default function ClientProposalsPage() {
                           {/* Conditional buttons for 'Under Review' status from the database equivalent */}
                           {proposal.status.toLowerCase() === "submitted" && (
                             <>
-                              <Button size="sm" className="bg-chart-3 hover:bg-chart-3/90 flex items-center gap-1">
-                                <CheckCircle size={16} />
-                                Approve
-                              </Button>
-                              <Button size="sm" variant="destructive">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleCancelProposal(proposal.id)}
+                              >
                                 <XCircle size={16} />
+                                Cancel
                               </Button>
                             </>
                           )}
