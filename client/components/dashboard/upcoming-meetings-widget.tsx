@@ -42,7 +42,13 @@ export function UpcomingMeetingsWidget({ userId, role }: { userId: number; role:
           const today = new Date()
           today.setHours(0, 0, 0, 0)
           
-          const upcoming = data.filter((m: any) => {
+          const upcoming = data
+            .map((m: any) => ({
+                ...m,
+                startTime: m.startTime || m.starttime,
+                endTime: m.endTime || m.endtime
+            }))
+            .filter((m: any) => {
              const mDate = new Date(m.date) // Assuming date string is parseable
              return mDate >= today
           }).slice(0, 3)
