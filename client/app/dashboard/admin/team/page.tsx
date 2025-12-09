@@ -210,7 +210,7 @@ export default function TeamPage() {
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Projects</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Workload</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Status</th>
-                      <th className="text-left py-3 px-4 text-sm font-semibold text-foreground">Actions</th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -251,11 +251,7 @@ export default function TeamPage() {
                             {member.status}
                           </Button>
                         </td>
-                        <td className="py-3 px-4">
-                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
-                            Edit
-                          </Button>
-                        </td>
+
                       </tr>
                     ))}
                   </tbody>
