@@ -1111,16 +1111,16 @@ BEGIN
     VALUES (p_proposal_id, p_subject, p_scheduled_start_date, p_scheduled_end_date, 'scheduled')
     RETURNING meeting_id INTO p_meeting_id;
 
-    INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-    VALUES (p_meeting_id, p_creator_id, 'invited');
+    INSERT INTO meeting_participants (meeting_id, user_id)
+    VALUES (p_meeting_id, p_creator_id);
 
     SELECT pm_user_id, client_id INTO v_pm_user_id, v_client_id
     FROM proposals
     WHERE proposal_id = p_proposal_id;
 
     IF v_pm_user_id IS NOT NULL THEN
-        INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-        VALUES (p_meeting_id, v_pm_user_id, 'invited');
+        INSERT INTO meeting_participants (meeting_id, user_id)
+        VALUES (p_meeting_id, v_pm_user_id);
     END IF;
 
     IF p_include_client = 1 THEN
@@ -1129,8 +1129,8 @@ BEGIN
         WHERE client_id = v_client_id;
 
         IF v_client_user_id IS NOT NULL THEN
-            INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-            VALUES (p_meeting_id, v_client_user_id, 'invited');
+            INSERT INTO meeting_participants (meeting_id, user_id)
+            VALUES (p_meeting_id, v_client_user_id);
         END IF;
     END IF;
 
@@ -1354,8 +1354,8 @@ BEGIN
     VALUES (p_proposal_id, p_subject, p_scheduled_start_date, p_scheduled_end_date, 'scheduled')
     RETURNING meeting_id INTO p_meeting_id;
 
-    INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-    VALUES (p_meeting_id, p_creator_id, 'invited');
+    INSERT INTO meeting_participants (meeting_id, user_id)
+    VALUES (p_meeting_id, p_creator_id);
 
     IF p_developer_ids IS NOT NULL AND LENGTH(p_developer_ids) > 0 THEN
         LOOP
@@ -1365,8 +1365,8 @@ BEGIN
             BEGIN
                 v_dev_id := TO_NUMBER(SUBSTR(v_list, 1, v_pos - 1));
                 
-                INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-                SELECT p_meeting_id, v_dev_id, 'invited' FROM DUAL
+                INSERT INTO meeting_participants (meeting_id, user_id)
+                SELECT p_meeting_id, v_dev_id FROM DUAL
                 WHERE NOT EXISTS (
                     SELECT 1 FROM meeting_participants WHERE meeting_id = p_meeting_id AND user_id = v_dev_id
                 );
@@ -1389,8 +1389,8 @@ BEGIN
             WHERE client_id = v_client_id;
 
             IF v_client_user_id IS NOT NULL THEN
-                INSERT INTO meeting_participants (meeting_id, user_id, attendance)
-                VALUES (p_meeting_id, v_client_user_id, 'invited');
+                INSERT INTO meeting_participants (meeting_id, user_id)
+                VALUES (p_meeting_id, v_client_user_id);
             END IF;
         EXCEPTION
             WHEN NO_DATA_FOUND THEN NULL;

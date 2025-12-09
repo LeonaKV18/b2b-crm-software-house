@@ -23,7 +23,7 @@ type OracleOutBinds = Record<string, any>;
  * @returns {Promise<OracleRows | OracleOutBinds | undefined>} A promise that resolves with the query result.
  * @throws {Error} If the query fails.
  */
-export async function executeQuery(query: string, params: oracledb.BindParameters = {}): Promise<OracleRows | OracleOutBinds | undefined> {
+export async function executeQuery<T = any>(query: string, params: oracledb.BindParameters = {}): Promise<T | undefined> {
   let connection;
   try {
     // Get a connection from the pool
@@ -45,7 +45,7 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
           const rows = await resultSet.getRows();
           await resultSet.close();
           // Lowercase keys for each row in the result set
-          lowercasedOutBinds[key] = rows.map((row: any) => {
+          lowercasedOutBinds[key.toLowerCase()] = rows.map((row: any) => {
             const newRow: any = {};
             for (const rowKey in row) {
               newRow[rowKey.toLowerCase()] = row[rowKey];
@@ -53,10 +53,10 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
             return newRow;
           });
         } else {
-           lowercasedOutBinds[key] = boundValue;
+           lowercasedOutBinds[key.toLowerCase()] = boundValue;
         }
       }
-      return lowercasedOutBinds;
+      return lowercasedOutBinds as T;
     }
     
     // Lowercase keys for direct rows result
@@ -67,10 +67,10 @@ export async function executeQuery(query: string, params: oracledb.BindParameter
                 newRow[rowKey.toLowerCase()] = row[rowKey];
             }
             return newRow;
-        });
+        }) as T;
     }
 
-    return result.rows;
+    return result.rows as T;
   } catch (err) {
     // Log the error and re-throw it
     console.error('Database query failed:', err);
