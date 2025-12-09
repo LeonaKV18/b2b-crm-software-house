@@ -20,16 +20,20 @@ export async function POST(req: NextRequest) {
       p_password: password,
       p_status: 'Active',
       p_client_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      p_success: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      p_message: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 200 },
     };
 
     const result = await executeQuery<{
       p_client_id: number;
-    }>(`BEGIN create_client(:p_name, :p_company, :p_contact_name, :p_email, :p_phone, :p_password, :p_status, :p_client_id); END;`, bindVars);
+      p_success: number;
+      p_message: string;
+    }>(`BEGIN create_client(:p_name, :p_company, :p_contact_name, :p_email, :p_phone, :p_password, :p_status, :p_client_id, :p_success, :p_message); END;`, bindVars);
 
-    if (result && result.p_client_id) {
+    if (result && result.p_success === 1) {
       return NextResponse.json({ success: true, clientId: result.p_client_id }, { status: 201 });
     } else {
-      return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
+      return NextResponse.json({ error: result?.p_message || "Failed to create account" }, { status: 400 });
     }
   } catch (error) {
     console.error("Error creating client account:", error);

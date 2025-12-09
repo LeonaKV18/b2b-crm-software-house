@@ -780,11 +780,23 @@ CREATE OR REPLACE PROCEDURE create_client (
     p_phone IN VARCHAR2,
     p_password IN VARCHAR2,
     p_status IN VARCHAR2,
-    p_client_id OUT NUMBER
+    p_client_id OUT NUMBER,
+    p_success OUT NUMBER,
+    p_message OUT VARCHAR2
 )
 AS
     v_user_id NUMBER;
+    v_exists NUMBER;
 BEGIN
+    SELECT COUNT(*) INTO v_exists FROM users WHERE email = p_email;
+
+    IF v_exists > 0 THEN
+        p_success := 0;
+        p_message := 'User with this email already exists.';
+        p_client_id := NULL;
+        RETURN;
+    END IF;
+
     INSERT INTO users (role, email, name, password, is_active)
     VALUES ('client', p_email, p_name, p_password, 1)
     RETURNING user_id INTO v_user_id;
@@ -796,11 +808,15 @@ BEGIN
     INSERT INTO contacts (user_id, client_id, full_name, email, phone, contact_type)
     VALUES (v_user_id, p_client_id, p_contact_name, p_email, p_phone, 'primary');
 
+    p_success := 1;
+    p_message := 'Client account created successfully.';
     COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
         ROLLBACK;
-        RAISE;
+        p_success := 0;
+        p_message := 'Database error: ' || SQLERRM;
+        p_client_id := NULL;
 END;
 /
 
