@@ -112,8 +112,14 @@ export default function TeamPage() {
     }
   }
 
-  const handleStatusToggle = async (memberId: number, currentStatus: string) => {
+  const handleStatusToggle = async (memberId: number, currentStatus: string, workload: number) => {
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+
+    if (newStatus === 'Inactive' && workload > 0) {
+        alert("Cannot deactivate a team member with active workload. Please reassign their projects/tasks first.");
+        return;
+    }
+
     if (!confirm(`Are you sure you want to set ${memberId} to ${newStatus}?`)) return;
 
     try {
@@ -240,7 +246,7 @@ export default function TeamPage() {
                             variant="outline" 
                             size="sm" 
                             className={`h-7 text-xs ${member.status === 'Active' ? 'bg-chart-3/20 text-chart-3' : 'bg-muted/20 text-muted-foreground'}`}
-                            onClick={() => handleStatusToggle(member.id, member.status)}
+                            onClick={() => handleStatusToggle(member.id, member.status, member.workload || 0)}
                           >
                             {member.status}
                           </Button>

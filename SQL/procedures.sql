@@ -1562,7 +1562,36 @@ CREATE OR REPLACE PROCEDURE update_user_status (
     p_success OUT NUMBER
 )
 AS
+    v_role VARCHAR2(20);
+    v_workload_count NUMBER;
 BEGIN
+    IF p_is_active = 0 THEN
+        -- Check role
+        SELECT role INTO v_role FROM users WHERE user_id = p_user_id;
+
+        IF v_role = 'developer' THEN
+            -- Check developer workload
+            SELECT COUNT(DISTINCT t.proposal_id)
+            INTO v_workload_count
+            FROM tasks t
+            JOIN proposals p ON t.proposal_id = p.proposal_id
+            WHERE t.locked_by = p_user_id
+            AND p.status IN ('active', 'in_progress');
+        ELSIF v_role = 'pm' THEN
+             -- Check PM workload
+            SELECT COUNT(*)
+            INTO v_workload_count
+            FROM proposals
+            WHERE pm_user_id = p_user_id
+            AND status IN ('active', 'in_progress');
+        END IF;
+
+        IF v_workload_count > 0 THEN
+             p_success := 0; -- Indicating failure due to workload
+             RETURN;
+        END IF;
+    END IF;
+
     UPDATE users
     SET is_active = p_is_active
     WHERE user_id = p_user_id;
