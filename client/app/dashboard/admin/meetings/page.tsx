@@ -32,9 +32,9 @@ interface Meeting {
   id: number;
   title: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   attendees: number;
-  type: string;
   status: string;
   project: string;
   mom?: string;
@@ -58,11 +58,23 @@ export default function MeetingsPage() {
   const [formData, setFormData] = useState({
     title: "",
     date: "",
-    time: "",
+    startTime: "",
+    endTime: "",
     proposalId: "",
     includeClient: false,
     location: ""
   })
+
+  const fetchMeetings = async () => {
+    try {
+      const res = await fetch(`/api/meetings?t=${new Date().getTime()}`)
+      if (!res.ok) throw new Error("Failed to fetch meetings")
+      const data = await res.json()
+      setMeetings(data)
+    } catch (err) {
+      console.error("Error fetching meetings:", err)
+    }
+  }
 
   useEffect(() => {
     if (!isLoggedIn || user?.role !== "admin") {
@@ -70,32 +82,26 @@ export default function MeetingsPage() {
       return
     }
 
-    const fetchData = async () => {
+    const initData = async () => {
       try {
         setLoading(true)
-        const [meetingsRes, projectsRes] = await Promise.all([
-          fetch("/api/meetings"),
-          fetch("/api/admin/meetings/projects")
-        ])
-
-        if (!meetingsRes.ok || !projectsRes.ok) {
-          throw new Error("Failed to fetch data")
+        // Fetch projects only once
+        const projectsRes = await fetch("/api/admin/meetings/projects")
+        if (projectsRes.ok) {
+          const projectsData = await projectsRes.json()
+          setProjects(projectsData)
         }
-
-        const meetingsData = await meetingsRes.json()
-        const projectsData = await projectsRes.json()
-
-        setMeetings(meetingsData)
-        setProjects(projectsData)
+        // Fetch meetings
+        await fetchMeetings()
       } catch (err) {
-        console.error("Failed to fetch meetings:", err)
+        console.error("Failed to load data:", err)
         setError("Failed to load data.")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
+    initData()
   }, [isLoggedIn, user?.role, router])
 
   const handleSchedule = async (e: React.FormEvent) => {
@@ -106,7 +112,6 @@ export default function MeetingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          type: "scrum", // Defaulting to scrum as types are removed
           userId: user?.id,
           subject: formData.title + (formData.location ? ` - ${formData.location}` : "")
         })
@@ -117,15 +122,13 @@ export default function MeetingsPage() {
         setFormData({
             title: "",
             date: "",
-            time: "",
+            startTime: "",
+            endTime: "",
             proposalId: "",
             includeClient: false,
             location: ""
         })
-        // Refresh meetings
-        const meetingsRes = await fetch("/api/meetings")
-        const meetingsData = await meetingsRes.json()
-        setMeetings(meetingsData)
+        await fetchMeetings()
       } else {
         alert("Failed to schedule meeting")
       }
@@ -151,10 +154,7 @@ export default function MeetingsPage() {
         setShowMomDialog(false)
         setSelectedMeeting(null)
         setMomText("")
-        // Refresh meetings
-        const meetingsRes = await fetch("/api/meetings")
-        const meetingsData = await meetingsRes.json()
-        setMeetings(meetingsData)
+        await fetchMeetings()
       } else {
         alert("Failed to save MoM")
       }
@@ -178,7 +178,7 @@ export default function MeetingsPage() {
     pdf.text(`Minutes of Meeting: ${selectedMeeting.title}`, margin, margin + 5);
 
     pdf.setFontSize(12);
-    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.time}\nProject: ${selectedMeeting.project || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
+    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.startTime} - ${selectedMeeting.endTime}\nProject: ${selectedMeeting.project || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
     pdf.text(textLines, margin, margin + 20);
 
     pdf.save(`MoM_${selectedMeeting.id}.pdf`);
@@ -274,12 +274,22 @@ export default function MeetingsPage() {
                         onChange={(e) => setFormData({...formData, date: e.target.value})}
                       />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Time</Label>
+                      <Label>Start Time</Label>
                       <Input 
                         type="time" 
-                        value={formData.time}
-                        onChange={(e) => setFormData({...formData, time: e.target.value})}
+                        value={formData.startTime}
+                        onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Time</Label>
+                      <Input 
+                        type="time" 
+                        value={formData.endTime}
+                        onChange={(e) => setFormData({...formData, endTime: e.target.value})}
                       />
                     </div>
                   </div>
@@ -341,12 +351,10 @@ export default function MeetingsPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                             meeting.status === 'scheduled' ? 'bg-primary/20 text-primary' : 
-                            meeting.status === 'completed' ? 'bg-chart-3/20 text-chart-3' : 'bg-muted text-muted-foreground'
+                            meeting.status === 'completed' ? 'bg-chart-3/20 text-chart-3' : 
+                            meeting.status === 'ongoing' ? 'bg-secondary/20 text-secondary' : 'bg-muted text-muted-foreground'
                         }`}>
                             {meeting.status}
-                        </span>
-                        <span className="text-xs text-muted-foreground border border-border px-2 py-1 rounded">
-                            {meeting.type}
                         </span>
                       </div>
                       <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
@@ -361,7 +369,7 @@ export default function MeetingsPage() {
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Clock size={16} />
-                          {meeting.time}
+                          {meeting.startTime} - {meeting.endTime}
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Users size={16} />

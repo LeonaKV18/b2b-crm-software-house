@@ -270,13 +270,28 @@ CREATE OR REPLACE PROCEDURE get_developer_meetings (
 )
 AS
 BEGIN
+    -- Update meeting status to ongoing if scheduled time has passed
+    UPDATE meetings
+    SET status = 'ongoing'
+    WHERE status = 'scheduled' 
+      AND scheduled_start_date <= SYSDATE 
+      AND scheduled_end_date >= SYSDATE;
+      
+    -- Update meeting status to completed if scheduled end time has passed
+    UPDATE meetings
+    SET status = 'completed'
+    WHERE status IN ('scheduled', 'ongoing')
+      AND scheduled_end_date < SYSDATE;
+      
+    COMMIT;
+
     OPEN p_meetings_cursor FOR
         SELECT
             m.meeting_id AS "id",
             m.subject AS "title",
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
-            m.meeting_type AS "type",
+            TO_CHAR(m.scheduled_start_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_start_date, 'HH:MI AM') AS "startTime",
+            TO_CHAR(m.scheduled_end_date, 'HH:MI AM') AS "endTime",
             m.status AS "status",
             p.title AS "project"
         FROM
@@ -288,7 +303,7 @@ BEGIN
         WHERE
             mp.user_id = p_user_id
         ORDER BY
-            m.scheduled_date ASC;
+            m.scheduled_start_date ASC;
 END;
 /
 
@@ -854,19 +869,37 @@ CREATE OR REPLACE PROCEDURE get_pm_meetings (
 )
 AS
 BEGIN
+    -- Update meeting status to ongoing if scheduled time has passed
+    UPDATE meetings
+    SET status = 'ongoing'
+    WHERE status = 'scheduled' 
+      AND scheduled_start_date <= SYSDATE
+      AND scheduled_end_date >= SYSDATE;
+
+    -- Update meeting status to completed if scheduled end time has passed
+    UPDATE meetings
+    SET status = 'completed'
+    WHERE status IN ('scheduled', 'ongoing')
+      AND scheduled_end_date < SYSDATE;
+
+    COMMIT;
+
     OPEN p_meetings_cursor FOR
         SELECT
             m.meeting_id AS "id",
             m.subject AS "title",
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
-            TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
-            (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS "attendees"
+            TO_CHAR(m.scheduled_start_date, 'YYYY-MM-DD') AS "date",
+            TO_CHAR(m.scheduled_start_date, 'HH:MI AM') AS "startTime",
+            TO_CHAR(m.scheduled_end_date, 'HH:MI AM') AS "endTime",
+            (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS "attendees",
+             m.status AS "status"
         FROM
             meetings m
         JOIN
             proposals p ON m.proposal_id = p.proposal_id
         WHERE
-            p.pm_user_id = p_user_id;
+            p.pm_user_id = p_user_id
+        ORDER BY m.scheduled_start_date DESC;
 END;
 /
 
@@ -1040,8 +1073,8 @@ CREATE OR REPLACE PROCEDURE create_meeting_custom (
     p_proposal_id IN NUMBER,
     p_creator_id IN NUMBER, -- Admin's user_id
     p_subject IN VARCHAR2,
-    p_scheduled_date IN DATE,
-    p_meeting_type IN VARCHAR2,
+    p_scheduled_start_date IN DATE,
+    p_scheduled_end_date IN DATE,
     p_include_client IN NUMBER, -- 1 to include, 0 to exclude
     p_meeting_id OUT NUMBER
 )
@@ -1050,8 +1083,8 @@ AS
     v_client_user_id NUMBER;
     v_client_id NUMBER;
 BEGIN
-    INSERT INTO meetings (proposal_id, subject, scheduled_date, meeting_type, status)
-    VALUES (p_proposal_id, p_subject, p_scheduled_date, p_meeting_type, 'scheduled')
+    INSERT INTO meetings (proposal_id, subject, scheduled_start_date, scheduled_end_date, status)
+    VALUES (p_proposal_id, p_subject, p_scheduled_start_date, p_scheduled_end_date, 'scheduled')
     RETURNING meeting_id INTO p_meeting_id;
 
     INSERT INTO meeting_participants (meeting_id, user_id, attendance)
@@ -1111,14 +1144,29 @@ CREATE OR REPLACE PROCEDURE get_all_meetings (
 )
 AS
 BEGIN
+    -- Update meeting status to ongoing if scheduled start time has passed but end time has not
+    UPDATE meetings
+    SET status = 'ongoing'
+    WHERE status = 'scheduled'
+      AND scheduled_start_date <= SYSDATE
+      AND scheduled_end_date >= SYSDATE;
+
+    -- Update meeting status to completed if scheduled end time has passed
+    UPDATE meetings
+    SET status = 'completed'
+    WHERE status IN ('scheduled', 'ongoing')
+      AND scheduled_end_date < SYSDATE;
+    
+    COMMIT;
+
     OPEN p_meetings_cursor FOR
         SELECT
             m.meeting_id AS id,
             m.subject AS title,
-            TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS date_str,
-            TO_CHAR(m.scheduled_date, 'HH24:MI') AS time_str,
+            TO_CHAR(m.scheduled_start_date, 'YYYY-MM-DD') AS date_str,
+            TO_CHAR(m.scheduled_start_date, 'HH24:MI') AS start_time_str,
+            TO_CHAR(m.scheduled_end_date, 'HH24:MI') AS end_time_str,
             (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS attendees,
-            m.meeting_type AS type,
             m.status AS status,
             p.title AS project,
             m.minutes_of_meeting AS mom
@@ -1126,7 +1174,7 @@ BEGIN
             meetings m
         LEFT JOIN
             proposals p ON m.proposal_id = p.proposal_id
-        ORDER BY m.scheduled_date DESC;
+        ORDER BY m.scheduled_start_date DESC;
 END;
 /
 
@@ -1265,8 +1313,8 @@ CREATE OR REPLACE PROCEDURE create_pm_meeting (
     p_proposal_id IN NUMBER,
     p_creator_id IN NUMBER, 
     p_subject IN VARCHAR2,
-    p_scheduled_date IN DATE,
-    p_meeting_type IN VARCHAR2,
+    p_scheduled_start_date IN DATE,
+    p_scheduled_end_date IN DATE,
     p_developer_ids IN VARCHAR2, 
     p_include_client IN NUMBER, 
     p_meeting_id OUT NUMBER
@@ -1278,8 +1326,8 @@ AS
     v_pos NUMBER;
     v_list VARCHAR2(32767) := p_developer_ids || ',';
 BEGIN
-    INSERT INTO meetings (proposal_id, subject, scheduled_date, meeting_type, status)
-    VALUES (p_proposal_id, p_subject, p_scheduled_date, p_meeting_type, 'scheduled')
+    INSERT INTO meetings (proposal_id, subject, scheduled_start_date, scheduled_end_date, status)
+    VALUES (p_proposal_id, p_subject, p_scheduled_start_date, p_scheduled_end_date, 'scheduled')
     RETURNING meeting_id INTO p_meeting_id;
 
     INSERT INTO meeting_participants (meeting_id, user_id, attendance)

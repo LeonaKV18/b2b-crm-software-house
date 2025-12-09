@@ -34,7 +34,7 @@ BEGIN
 
     IF v_user_role = 'client' THEN
         -- Get the scheduled date of the meeting
-        SELECT scheduled_date INTO v_meeting_date
+        SELECT scheduled_start_date INTO v_meeting_date
         FROM meetings
         WHERE meeting_id = :new.meeting_id;
 

@@ -13,7 +13,8 @@ interface Meeting {
   id: number;
   title: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   type: string;
   location: string;
 }
@@ -82,7 +83,7 @@ export default function MeetingsPage() {
                   </div>
                   <div className="flex gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1"><Calendar size={14} /> {meeting.date}</div>
-                    <div className="flex items-center gap-1"><Clock size={14} /> {meeting.time}</div>
+                    <div className="flex items-center gap-1"><Clock size={14} /> {meeting.startTime} - {meeting.endTime}</div>
                     <div className="flex items-center gap-1"><MapPin size={14} /> {meeting.location}</div>
                   </div>
                 </CardContent>

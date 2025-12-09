@@ -8,7 +8,8 @@ interface Meeting {
   id: number;
   title: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   location: string;
 }
 
@@ -76,7 +77,7 @@ export function UpcomingMeetingsWidget({ userId, role }: { userId: number; role:
                   <p className="font-medium text-sm text-foreground">{m.title}</p>
                   <div className="flex gap-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><Calendar size={10}/> {m.date}</span>
-                    <span className="flex items-center gap-1"><Clock size={10}/> {m.time}</span>
+                    <span className="flex items-center gap-1"><Clock size={10}/> {m.startTime} - {m.endTime}</span>
                   </div>
                 </div>
               </div>

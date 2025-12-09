@@ -13,8 +13,8 @@ interface Meeting {
   id: number;
   title: string;
   date: string;
-  time: string;
-  type: string;
+  startTime: string;
+  endTime: string;
   status: string;
   project: string;
 }
@@ -109,9 +109,6 @@ export default function ClientMeetingsPage() {
                             }`}>
                                 {meeting.status}
                             </span>
-                            <span className="text-xs text-muted-foreground border border-border px-2 py-1 rounded">
-                                {meeting.type}
-                            </span>
                         </div>
                         <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
                         
@@ -122,7 +119,7 @@ export default function ClientMeetingsPage() {
                           </div>
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Clock size={16} />
-                            {meeting.time}
+                            {meeting.startTime} - {meeting.endTime}
                           </div>
                           {/* Project Name */}
                           {meeting.project && (
@@ -133,9 +130,6 @@ export default function ClientMeetingsPage() {
                           )}
                         </div>
                       </div>
-                      <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
-                        Join
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>

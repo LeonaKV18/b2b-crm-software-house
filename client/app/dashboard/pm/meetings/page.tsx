@@ -20,7 +20,8 @@ interface Meeting {
   id: number;
   title: string;
   date: string;
-  time: string;
+  startTime: string;
+  endTime: string;
   attendees: number;
   type: string;
   location: string;
@@ -62,7 +63,8 @@ export default function PMMeetingsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("")
   const [meetingSubject, setMeetingSubject] = useState("")
   const [meetingDate, setMeetingDate] = useState("")
-  const [meetingTime, setMeetingTime] = useState("")
+  const [meetingStartTime, setMeetingStartTime] = useState("")
+  const [meetingEndTime, setMeetingEndTime] = useState("")
   const [selectedDeveloperIds, setSelectedDeveloperIds] = useState<string[]>([])
   const [includeClient, setIncludeClient] = useState(false)
 
@@ -74,12 +76,12 @@ export default function PMMeetingsPage() {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       const data = await response.json()
       // Ensure data matches Meeting interface
-      // API returns: id, title, date_str, time_str, attendees, type, location, mom
-      // We need to map date_str -> date, time_str -> time if they differ
+      // API returns: id, title, date (formatted), startTime (formatted), endTime (formatted), attendees, status
+      // We map API response to local state.
+      // API: { id, title, date, startTime, endTime, attendees, status, ... }
       const mappedMeetings = data.map((m: any) => ({
           ...m,
-          date: m.date_str || m.date,
-          time: m.time_str || m.time
+          // If API returns different keys, map them here. Currently aligned.
       }))
       setMeetings(mappedMeetings)
     } catch (err) {
@@ -140,14 +142,12 @@ export default function PMMeetingsPage() {
   }
 
   const handleScheduleMeeting = async () => {
-    if (!selectedProjectId || !meetingSubject || !meetingDate || !meetingTime) {
+    if (!selectedProjectId || !meetingSubject || !meetingDate || !meetingStartTime || !meetingEndTime) {
         alert("Please fill in all required fields.")
         return
     }
 
     try {
-        const scheduledDateTime = new Date(`${meetingDate}T${meetingTime}`)
-
         const res = await fetch("/api/pm-meetings/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -155,8 +155,9 @@ export default function PMMeetingsPage() {
                 proposalId: selectedProjectId,
                 creatorId: user?.id,
                 subject: meetingSubject,
-                scheduledDate: scheduledDateTime.toISOString(),
-                meetingType: 'scrum', // Hardcoded default
+                scheduledDate: meetingDate,
+                startTime: meetingStartTime,
+                endTime: meetingEndTime,
                 developerIds: selectedDeveloperIds,
                 includeClient: includeClient
             })
@@ -166,7 +167,8 @@ export default function PMMeetingsPage() {
             setShowScheduleDialog(false)
             setMeetingSubject("")
             setMeetingDate("")
-            setMeetingTime("")
+            setMeetingStartTime("")
+            setMeetingEndTime("")
             setSelectedProjectId("")
             setSelectedDeveloperIds([])
             setIncludeClient(false)
@@ -219,7 +221,7 @@ export default function PMMeetingsPage() {
     pdf.text(`Minutes of Meeting: ${selectedMeeting.title}`, margin, margin + 5);
 
     pdf.setFontSize(12);
-    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.time}\nAttendees: ${selectedMeeting.attendees || 'N/A'}\nLocation: ${selectedMeeting.location || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
+    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.startTime} - ${selectedMeeting.endTime}\nAttendees: ${selectedMeeting.attendees || 'N/A'}\nLocation: ${selectedMeeting.location || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
     pdf.text(textLines, margin, margin + 20);
 
     pdf.save(`MoM_${selectedMeeting.id}.pdf`);
@@ -287,7 +289,7 @@ export default function PMMeetingsPage() {
                                 </div>
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Clock size={16} />
-                                    {meeting.time}
+                                    {meeting.startTime} - {meeting.endTime}
                                 </div>
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <Users size={16} />
@@ -301,9 +303,6 @@ export default function PMMeetingsPage() {
                             )}
                         </div>
                         <div className="flex gap-2">
-                            <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
-                                Join
-                            </Button>
                             <Button 
                                 size="sm" 
                                 variant="outline" 
@@ -365,12 +364,23 @@ export default function PMMeetingsPage() {
                                 onChange={(e) => setMeetingDate(e.target.value)}
                             />
                         </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Time</Label>
+                            <Label>Start Time</Label>
                             <Input 
                                 type="time"
-                                value={meetingTime}
-                                onChange={(e) => setMeetingTime(e.target.value)}
+                                value={meetingStartTime}
+                                onChange={(e) => setMeetingStartTime(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>End Time</Label>
+                            <Input 
+                                type="time"
+                                value={meetingEndTime}
+                                onChange={(e) => setMeetingEndTime(e.target.value)}
                             />
                         </div>
                     </div>

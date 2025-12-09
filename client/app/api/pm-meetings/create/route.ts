@@ -5,21 +5,24 @@ import * as oracledb from 'oracledb';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { proposalId, creatorId, subject, scheduledDate, meetingType, developerIds, includeClient } = body;
+    const { proposalId, creatorId, subject, scheduledDate, startTime, endTime, developerIds, includeClient } = body;
 
-    if (!proposalId || !creatorId || !subject || !scheduledDate) {
+    if (!proposalId || !creatorId || !subject || !scheduledDate || !startTime || !endTime) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     // Convert array of IDs to comma-separated string
     const devIdsString = Array.isArray(developerIds) ? developerIds.join(',') : '';
 
+    const scheduledStartDate = new Date(`${scheduledDate}T${startTime}:00`);
+    const scheduledEndDate = new Date(`${scheduledDate}T${endTime}:00`);
+
     const bindVars = {
       p_proposal_id: Number(proposalId),
       p_creator_id: Number(creatorId),
       p_subject: subject,
-      p_scheduled_date: new Date(scheduledDate),
-      p_meeting_type: meetingType || 'scrum',
+      p_scheduled_start_date: scheduledStartDate,
+      p_scheduled_end_date: scheduledEndDate,
       p_developer_ids: devIdsString,
       p_include_client: includeClient ? 1 : 0,
       p_meeting_id: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const result = await executeQuery<{
       p_meeting_id: number;
-    }>(`BEGIN create_pm_meeting(:p_proposal_id, :p_creator_id, :p_subject, :p_scheduled_date, :p_meeting_type, :p_developer_ids, :p_include_client, :p_meeting_id); END;`, bindVars);
+    }>(`BEGIN create_pm_meeting(:p_proposal_id, :p_creator_id, :p_subject, :p_scheduled_start_date, :p_scheduled_end_date, :p_developer_ids, :p_include_client, :p_meeting_id); END;`, bindVars);
 
     if (result && result.p_meeting_id) {
       return NextResponse.json({ success: true, meetingId: result.p_meeting_id }, { status: 201 });

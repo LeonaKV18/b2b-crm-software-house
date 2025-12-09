@@ -193,14 +193,72 @@ VALUES ((SELECT proposal_id FROM proposals WHERE title='Alpha Web Portal'), 'Alp
 
 
 -- 6. MEETINGS
-INSERT INTO MEETINGS (PROPOSAL_ID, MEETING_TYPE, SCHEDULED_DATE, SUBJECT, STATUS)
-VALUES ((SELECT proposal_id FROM proposals WHERE title='Alpha Web Portal'), 'scrum', SYSDATE+1, 'Daily Standup', 'scheduled');
+INSERT INTO MEETINGS (PROPOSAL_ID, MEETING_TYPE, SCHEDULED_START_DATE, SCHEDULED_END_DATE, SUBJECT, STATUS)
+VALUES (
+    (SELECT proposal_id FROM proposals WHERE title='Alpha Web Portal'), 
+    'scrum', 
+    SYSDATE + INTERVAL '1' DAY + INTERVAL '9' HOUR, 
+    SYSDATE + INTERVAL '1' DAY + INTERVAL '10' HOUR, 
+    'Daily Standup - Tomorrow', 
+    'scheduled'
+);
 
 INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
-VALUES ((SELECT meeting_id FROM meetings WHERE subject='Daily Standup'), (SELECT user_id FROM users WHERE email='pm@example.com'), 'invited');
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Daily Standup - Tomorrow'), (SELECT user_id FROM users WHERE email='pm@example.com'), 'invited');
 
 INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
-VALUES ((SELECT meeting_id FROM meetings WHERE subject='Daily Standup'), (SELECT user_id FROM users WHERE email='dev1@example.com'), 'invited');
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Daily Standup - Tomorrow'), (SELECT user_id FROM users WHERE email='dev1@example.com'), 'invited');
 
+-- Add an ongoing meeting (current time is between start and end)
+INSERT INTO MEETINGS (PROPOSAL_ID, MEETING_TYPE, SCHEDULED_START_DATE, SCHEDULED_END_DATE, SUBJECT, STATUS)
+VALUES (
+    (SELECT proposal_id FROM proposals WHERE title='Beta Analytics'), 
+    'review', 
+    SYSDATE - INTERVAL '30' MINUTE, 
+    SYSDATE + INTERVAL '30' MINUTE, 
+    'Beta Analytics Review (Ongoing)', 
+    'ongoing'
+);
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Beta Analytics Review (Ongoing)'), (SELECT user_id FROM users WHERE email='pm@example.com'), 'invited');
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Beta Analytics Review (Ongoing)'), (SELECT user_id FROM users WHERE email='client@example.com'), 'invited');
+
+-- Add a completed meeting (end time is in the past)
+INSERT INTO MEETINGS (PROPOSAL_ID, MEETING_TYPE, SCHEDULED_START_DATE, SCHEDULED_END_DATE, SUBJECT, STATUS, MINUTES_OF_MEETING)
+VALUES (
+    (SELECT proposal_id FROM proposals WHERE title='Gamma CRM'), 
+    'kickoff', 
+    SYSDATE - INTERVAL '2' DAY - INTERVAL '10' HOUR, 
+    SYSDATE - INTERVAL '2' DAY - INTERVAL '9' HOUR, 
+    'Gamma CRM Kickoff (Completed)', 
+    'completed', 
+    'Discussed project scope and initial requirements. Action items assigned.'
+);
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Gamma CRM Kickoff (Completed)'), (SELECT user_id FROM users WHERE email='pm@example.com'), 'attended');
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Gamma CRM Kickoff (Completed)'), (SELECT user_id FROM users WHERE email='client3@example.com'), 'attended');
+
+-- Add a scheduled meeting for a client
+INSERT INTO MEETINGS (PROPOSAL_ID, MEETING_TYPE, SCHEDULED_START_DATE, SCHEDULED_END_DATE, SUBJECT, STATUS)
+VALUES (
+    (SELECT proposal_id FROM proposals WHERE title='Website Redesign Project'), 
+    'client_sync', 
+    SYSDATE + INTERVAL '3' DAY + INTERVAL '14' HOUR, 
+    SYSDATE + INTERVAL '3' DAY + INTERVAL '15' HOUR, 
+    'Client Sync - Website Redesign', 
+    'scheduled'
+);
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Client Sync - Website Redesign'), (SELECT user_id FROM users WHERE email='pm@example.com'), 'invited');
+
+INSERT INTO MEETING_PARTICIPANTS (MEETING_ID, USER_ID, ATTENDANCE)
+VALUES ((SELECT meeting_id FROM meetings WHERE subject='Client Sync - Website Redesign'), (SELECT user_id FROM users WHERE email='client@example.com'), 'invited');
 
 COMMIT;
