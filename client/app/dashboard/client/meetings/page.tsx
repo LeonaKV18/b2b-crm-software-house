@@ -14,8 +14,9 @@ interface Meeting {
   title: string;
   date: string;
   time: string;
-  type: string; // Type is still returned by API even if we don't display it prominently
-  location: string;
+  type: string;
+  status: string;
+  project: string;
 }
 
 export default function ClientMeetingsPage() {
@@ -101,8 +102,18 @@ export default function ClientMeetingsPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                meeting.status === 'scheduled' ? 'bg-primary/20 text-primary' : 
+                                meeting.status === 'completed' ? 'bg-chart-3/20 text-chart-3' : 'bg-muted text-muted-foreground'
+                            }`}>
+                                {meeting.status}
+                            </span>
+                            <span className="text-xs text-muted-foreground border border-border px-2 py-1 rounded">
+                                {meeting.type}
+                            </span>
+                        </div>
                         <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
-                        {/* Hidden type display as per previous refactor */}
                         
                         <div className="flex flex-wrap gap-4 mt-4 text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -113,10 +124,11 @@ export default function ClientMeetingsPage() {
                             <Clock size={16} />
                             {meeting.time}
                           </div>
-                          {/* Location or Meeting Link if available */}
-                          {meeting.location && (
+                          {/* Project Name */}
+                          {meeting.project && (
                               <div className="flex items-center gap-2 text-muted-foreground">
-                                  <span className="font-semibold">Location:</span> {meeting.location}
+                                  <Users size={16} />
+                                  <span className="font-semibold">Project:</span> {meeting.project}
                               </div>
                           )}
                         </div>

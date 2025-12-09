@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     if (result && result.p_meetings_cursor) {
       // Map the result to match the frontend interface if needed,
       // but the procedure uses aliases that match fairly well.
-      // SQL returns: id, title, date_str, time_str, attendees, type, location, mom
+      // SQL returns: id, title, date_str, time_str, attendees, type, status, project, mom
       const meetings = result.p_meetings_cursor.map((m: any) => ({
         id: m.ID,
         title: m.TITLE,
@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
         time: m.TIME_STR,
         attendees: m.ATTENDEES,
         type: m.TYPE,
-        location: m.LOCATION,
+        status: m.STATUS,
+        project: m.PROJECT,
         mom: m.MOM
       }));
       return NextResponse.json(meetings);

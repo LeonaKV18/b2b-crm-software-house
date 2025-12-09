@@ -277,13 +277,18 @@ BEGIN
             TO_CHAR(m.scheduled_date, 'YYYY-MM-DD') AS "date",
             TO_CHAR(m.scheduled_date, 'HH:MI AM') AS "time",
             m.meeting_type AS "type",
-            m.subject AS "location"
+            m.status AS "status",
+            p.title AS "project"
         FROM
             meetings m
         JOIN
             meeting_participants mp ON m.meeting_id = mp.meeting_id
+        LEFT JOIN
+            proposals p ON m.proposal_id = p.proposal_id
         WHERE
-            mp.user_id = p_user_id;
+            mp.user_id = p_user_id
+        ORDER BY
+            m.scheduled_date ASC;
 END;
 /
 
@@ -1114,10 +1119,13 @@ BEGIN
             TO_CHAR(m.scheduled_date, 'HH24:MI') AS time_str,
             (SELECT COUNT(*) FROM meeting_participants mp WHERE mp.meeting_id = m.meeting_id) AS attendees,
             m.meeting_type AS type,
-            m.subject AS location,
+            m.status AS status,
+            p.title AS project,
             m.minutes_of_meeting AS mom
         FROM
             meetings m
+        LEFT JOIN
+            proposals p ON m.proposal_id = p.proposal_id
         ORDER BY m.scheduled_date DESC;
 END;
 /

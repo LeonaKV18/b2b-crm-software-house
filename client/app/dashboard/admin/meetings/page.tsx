@@ -35,7 +35,8 @@ interface Meeting {
   time: string;
   attendees: number;
   type: string;
-  location: string;
+  status: string;
+  project: string;
   mom?: string;
 }
 
@@ -177,7 +178,7 @@ export default function MeetingsPage() {
     pdf.text(`Minutes of Meeting: ${selectedMeeting.title}`, margin, margin + 5);
 
     pdf.setFontSize(12);
-    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.time}\nLocation: ${selectedMeeting.location || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
+    const textLines = pdf.splitTextToSize(`Date: ${selectedMeeting.date}\nTime: ${selectedMeeting.time}\nProject: ${selectedMeeting.project || 'N/A'}\n\n${selectedMeeting.mom}`, pageWidth);
     pdf.text(textLines, margin, margin + 20);
 
     pdf.save(`MoM_${selectedMeeting.id}.pdf`);
@@ -337,7 +338,21 @@ export default function MeetingsPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            meeting.status === 'scheduled' ? 'bg-primary/20 text-primary' : 
+                            meeting.status === 'completed' ? 'bg-chart-3/20 text-chart-3' : 'bg-muted text-muted-foreground'
+                        }`}>
+                            {meeting.status}
+                        </span>
+                        <span className="text-xs text-muted-foreground border border-border px-2 py-1 rounded">
+                            {meeting.type}
+                        </span>
+                      </div>
                       <h3 className="font-bold text-foreground text-lg">{meeting.title}</h3>
+                      {meeting.project && (
+                          <p className="text-sm text-muted-foreground mt-1">Project: {meeting.project}</p>
+                      )}
 
                       <div className="flex flex-wrap gap-4 mt-4 text-sm">
                         <div className="flex items-center gap-2 text-muted-foreground">
@@ -361,9 +376,6 @@ export default function MeetingsPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="bg-secondary border-border hover:bg-secondary/80">
-                        Join
-                      </Button>
                       <Button 
                         size="sm" 
                         variant="outline" 
