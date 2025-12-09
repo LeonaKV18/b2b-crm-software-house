@@ -255,19 +255,7 @@ export default function DeveloperDashboard() {
             </CardContent>
           </Card>
 
-          {/* Quick Navigation */}
-          <div className="flex gap-2">
-            <Link href="/dashboard/pm">
-              <Button variant="outline" className="bg-secondary border-border">
-                PM Dashboard
-              </Button>
-            </Link>
-            <Link href="/">
-              <Button variant="outline" className="bg-secondary border-border">
-                Logout
-              </Button>
-            </Link>
-          </div>
+
         </div>
       </div>
     </div>
