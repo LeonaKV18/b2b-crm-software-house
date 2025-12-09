@@ -18,7 +18,7 @@ WHERE u.EMAIL = 'client@example.com';
 
 -- Proposals (Projects)
 INSERT INTO PROPOSALS (CLIENT_ID, PM_USER_ID, TITLE, DESCRIPTION, ESTIMATED_HOURS, ACTUAL_HOURS, VALUE, STATUS, ADMIN_COMMENTS, SRS_APPROVED, CREATED_AT, EXPECTED_CLOSE, ACTUAL_CLOSE)
-SELECT c.client_id, pm.user_id, 'Website Redesign', 'Complete redesign of corporate website', 200, 50, 15000, 'in_progress', 'Approved by admin', 1, SYSDATE - 10, SYSDATE + 20, NULL
+SELECT c.client_id, pm.user_id, 'Website Redesign', 'Complete redesign of corporate website', 200, 50, 15000, 'active', 'Approved by admin', 1, SYSDATE - 10, SYSDATE + 20, NULL
 FROM CLIENTS c
 JOIN USERS u ON c.user_id = u.user_id
 CROSS JOIN USERS pm
