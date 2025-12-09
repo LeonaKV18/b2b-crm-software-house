@@ -19,7 +19,7 @@ interface Client {
   email: string;
   phone: string;
   projects: number;
-  lastInteraction: string;
+  lastInteraction?: string | null; // allow null/undefined
 }
 
 export default function ClientsPage() {
@@ -55,7 +55,14 @@ export default function ClientsPage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      setClients(data)
+      // map back-end field(s) safely to lastInteraction (support either snake_case or camelCase)
+      const normalized = Array.isArray(data)
+        ? data.map((c: any) => ({
+            ...c,
+            lastInteraction: c.lastInteraction ?? c.last_interaction ?? null,
+          }))
+        : []
+      setClients(normalized)
     } catch (err) {
       console.error("Failed to fetch clients:", err)
       setError("Failed to load clients.")
@@ -306,7 +313,9 @@ export default function ClientsPage() {
                             {client.status}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">{client.lastInteraction}</td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {client.lastInteraction ? new Date(client.lastInteraction).toLocaleDateString() : "—"}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="flex gap-2">
                             <button
@@ -390,7 +399,9 @@ export default function ClientsPage() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Last Interaction</p>
-                <p className="text-foreground font-medium">{selectedClient.lastInteraction}</p>
+                <p className="text-foreground font-medium">
+                  {selectedClient.lastInteraction ? new Date(selectedClient.lastInteraction).toLocaleDateString() : "—"}
+                </p>
               </div>
               <div className="pt-4">
                 <Button onClick={() => setShowDetailsModal(false)} className="w-full bg-primary hover:bg-primary/90">

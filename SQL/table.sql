@@ -70,6 +70,7 @@ CREATE TABLE clients (
     company_name VARCHAR2(255) NOT NULL,
     industry VARCHAR2(255),
     timezone VARCHAR2(50),
+    last_interaction TIMESTAMP,
     CONSTRAINT fk_clients_user
         FOREIGN KEY (user_id)
         REFERENCES users(user_id)

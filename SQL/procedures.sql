@@ -29,16 +29,18 @@ BEGIN
     OPEN p_clients_cursor FOR
         SELECT
             c.client_id AS "id",
-            c.company_name AS "name",
+            u.name AS "name",
             c.company_name AS "company",
-            con.full_name AS "contact",
-            'Active' as "status",
-            con.email AS "email",
+            NVL(con.full_name, u.name) AS "contact",
+            CASE WHEN u.is_active = 1 THEN 'Active' ELSE 'Inactive' END AS "status",
+            NVL(con.email, u.email) AS "email",
             con.phone AS "phone",
             (SELECT COUNT(*) FROM proposals WHERE client_id = c.client_id) AS "projects",
-            '2 days ago' as "lastInteraction"
+            TO_CHAR(c.last_interaction, 'YYYY-MM-DD') AS "lastInteraction"
         FROM
             clients c
+        JOIN
+            users u ON c.user_id = u.user_id
         LEFT JOIN
             contacts con ON c.client_id = con.client_id AND con.contact_type = 'primary';
 END;

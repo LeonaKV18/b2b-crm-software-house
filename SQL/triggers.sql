@@ -1,78 +1,68 @@
--- Trigger/Job to deactivate clients who haven't sent a proposal in 6 months.
--- Since standard triggers fire on data events (Insert/Update/Delete) and not time,
--- the correct approach is a Scheduled Job that runs daily.
-
--- 1. Create the procedure to perform the check and update.
-CREATE OR REPLACE PROCEDURE deactivate_dormant_clients AS
-BEGIN
-    UPDATE users u
-    SET u.is_active = 0
-    WHERE u.user_id IN (
-        SELECT c.user_id
-        FROM clients c
-        JOIN proposals p ON c.client_id = p.client_id
-        GROUP BY c.user_id
-        HAVING MAX(p.created_at) < ADD_MONTHS(SYSDATE, -6)
-    )
-    AND u.role = 'client'
-    AND u.is_active = 1;
-
-    COMMIT;
-END;
-/
-
--- 2. Create a scheduled job to run this procedure daily.
--- Note: This requires the CREATE JOB privilege.
-BEGIN
-    -- Drop the job if it already exists to avoid errors on re-run
-    BEGIN
-        DBMS_SCHEDULER.drop_job(job_name => 'DEACTIVATE_DORMANT_CLIENTS_JOB');
-    EXCEPTION
-        WHEN OTHERS THEN NULL; -- Ignore if job doesn't exist
-    END;
-
-    DBMS_SCHEDULER.create_job (
-        job_name        => 'DEACTIVATE_DORMANT_CLIENTS_JOB',
-        job_type        => 'STORED_PROCEDURE',
-        job_action      => 'deactivate_dormant_clients',
-        start_date      => SYSDATE,
-        repeat_interval => 'FREQ=DAILY; BYHOUR=0; BYMINUTE=0; BYSECOND=0', -- Run every midnight
-        enabled         => TRUE,
-        comments        => 'Daily job to deactivate clients with no proposals in the last 6 months.'
-    );
-END;
-/
-
--- Trigger to automatically update completed_date when a task is marked as done
-CREATE OR REPLACE TRIGGER trg_task_completion
-BEFORE UPDATE ON tasks
+-- Trigger to update last_interaction on new proposal
+CREATE OR REPLACE TRIGGER trg_update_interaction_on_proposal
+AFTER INSERT ON proposals
 FOR EACH ROW
+DECLARE
+    v_current_interaction TIMESTAMP;
 BEGIN
-    IF :NEW.status = 'done' AND :OLD.status != 'done' THEN
-        :NEW.completed_date := SYSDATE;
-    ELSIF :NEW.status != 'done' THEN
-        :NEW.completed_date := NULL;
+    SELECT last_interaction INTO v_current_interaction
+    FROM clients
+    WHERE client_id = :new.client_id;
+
+    IF v_current_interaction IS NULL OR :new.created_at > v_current_interaction THEN
+        UPDATE clients
+        SET last_interaction = :new.created_at
+        WHERE client_id = :new.client_id;
     END IF;
 END;
 /
 
--- Trigger to prevent creating tasks for closed/completed proposals
-CREATE OR REPLACE TRIGGER trg_prevent_tasks_on_closed_proposal
-BEFORE INSERT ON tasks
+-- Trigger to update last_interaction on new meeting invitation
+CREATE OR REPLACE TRIGGER trg_update_interaction_on_meeting
+AFTER INSERT ON meeting_participants
 FOR EACH ROW
 DECLARE
-    v_proposal_status VARCHAR2(50);
+    v_user_role VARCHAR2(20);
+    v_meeting_date TIMESTAMP;
+    v_client_id NUMBER;
+    v_current_interaction TIMESTAMP;
 BEGIN
-    SELECT status INTO v_proposal_status
-    FROM proposals
-    WHERE proposal_id = :NEW.proposal_id;
+    -- Check if the participant is a client
+    SELECT role INTO v_user_role
+    FROM users
+    WHERE user_id = :new.user_id;
 
-    IF v_proposal_status IN ('completed', 'rejected', 'cancelled') THEN
-        RAISE_APPLICATION_ERROR(-20001, 'Cannot add tasks to a closed or rejected proposal.');
+    IF v_user_role = 'client' THEN
+        -- Get the scheduled date of the meeting
+        SELECT scheduled_date INTO v_meeting_date
+        FROM meetings
+        WHERE meeting_id = :new.meeting_id;
+
+        -- Get the client_id associated with the user
+        SELECT client_id, last_interaction INTO v_client_id, v_current_interaction
+        FROM clients
+        WHERE user_id = :new.user_id;
+        
+        -- Update the last_interaction timestamp if the new meeting is later
+        IF v_current_interaction IS NULL OR v_meeting_date > v_current_interaction THEN
+            UPDATE clients
+            SET last_interaction = v_meeting_date
+            WHERE client_id = v_client_id;
+        END IF;
     END IF;
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        -- Should be handled by FK constraint, but safe to ignore here
-        NULL;
+        NULL; -- Ignore if user or client not found
+END;
+/
+
+-- Trigger to set initial last_interaction on client creation
+CREATE OR REPLACE TRIGGER trg_client_init_interaction
+BEFORE INSERT ON clients
+FOR EACH ROW
+BEGIN
+    IF :NEW.last_interaction IS NULL THEN
+        :NEW.last_interaction := CURRENT_TIMESTAMP;
+    END IF;
 END;
 /

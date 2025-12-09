@@ -4,7 +4,7 @@ You are assisting with a B2B CRM project. Your job is to fix frontend issues one
 
 ## How you should work
 
-1. Read all project files inside this repository.
+1. Read all project files inside this repository,cache it locally some how to ave up on costs,only update cache of modified folders
 2. Understand the component, API request, or page before making changes.
 3. When the developer selects a file to fix, propose the minimal required changes.
 4. Provide code diffs only — no entire file rewrites unless necessary.
