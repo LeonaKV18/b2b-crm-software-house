@@ -55,11 +55,11 @@ export default function ClientsPage() {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      // map back-end field(s) safely to lastInteraction (support either snake_case or camelCase)
+      // map back-end field(s) safely to lastInteraction (support either snake_case or camelCase or lowercase)
       const normalized = Array.isArray(data)
         ? data.map((c: any) => ({
             ...c,
-            lastInteraction: c.lastInteraction ?? c.last_interaction ?? null,
+            lastInteraction: c.lastInteraction ?? c.last_interaction ?? c.lastinteraction ?? null,
           }))
         : []
       setClients(normalized)
